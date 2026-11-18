@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { SHELL_COLORS, uid, type ShellColor, type Spot } from '../lib/db'
-import { MAX_UPLOAD_MB, mediaFor, saveSpot, useErmita } from '../lib/store'
+import { mediaFor, refreshNow, saveSpotRecord, uploadSpotFile, useErmita } from '../lib/store'
+import { formatMB, PrepareError, prepareImage, prepareVideo, type Prepared } from '../lib/media'
 import { formatCoords } from '../lib/geo'
 import { Shell } from './Art'
 import { Icon, StarInput, useObjectUrl } from './ui'
@@ -12,10 +13,44 @@ interface Props {
   onSaved: (id: string, isNew: boolean) => void
 }
 
+type Stage = 'preparing' | 'ready' | 'uploading' | 'done' | 'failed' | 'rejected'
+
+/** Archivo nuevo: se prepara (comprime) al elegirlo y se sube al guardar. */
 interface Pending {
   key: string
   file: File
   kind: 'image' | 'video'
+  stage: Stage
+  progress: number // 0–1 de la fase actual
+  prepared?: Prepared
+  estimate?: number // bytes aproximados tras comprimir
+  message?: string // motivo si se rechaza
+  ctrl: AbortController
+}
+
+const pct = (f: number) => `${Math.round(f * 100)} %`
+
+/** Texto de estado de cada archivo, para que se sepa siempre qué está pasando. */
+function describe(p: Pending) {
+  switch (p.stage) {
+    case 'preparing':
+      if (p.kind === 'image') return 'Preparando la foto…'
+      return p.estimate !== undefined
+        ? `Comprimiendo… ${pct(p.progress)} · ${formatMB(p.file.size)} → unos ${formatMB(p.estimate)}`
+        : `Revisando el vídeo (${formatMB(p.file.size)})…`
+    case 'ready':
+      return p.prepared!.compressed
+        ? `Listo para subir: ${formatMB(p.prepared!.originalSize)} → ${formatMB(p.prepared!.blob.size)}`
+        : `Listo para subir: ${formatMB(p.prepared!.blob.size)}`
+    case 'uploading':
+      return `Subiendo… ${pct(p.progress)} de ${formatMB(p.prepared!.blob.size)}`
+    case 'done':
+      return 'Subido'
+    case 'failed':
+      return 'No se pudo subir. Pulsa «Guardar» otra vez y seguirá por donde iba.'
+    case 'rejected':
+      return p.message ?? 'No se puede subir este archivo.'
+  }
 }
 
 
@@ -29,6 +64,8 @@ export function SpotForm({ spot, draft, onCancel, onSaved }: Props) {
   const [dragging, setDragging] = useState(false)
   const [error, setError] = useState<string>()
   const [saving, setSaving] = useState(false)
+  const [id] = useState(() => spot?.id ?? uid()) // fijo: si falla una subida, reintentar usa la misma concha
+  const [createdAt] = useState(() => spot?.createdAt ?? Date.now())
   const fileInput = useRef<HTMLInputElement>(null)
   const nameInput = useRef<HTMLInputElement>(null)
 
@@ -40,19 +77,49 @@ export function SpotForm({ spot, draft, onCancel, onSaved }: Props) {
     if (!spot) nameInput.current?.focus({ preventScroll: true })
   }, [spot])
 
+  // Avisar si se intenta cerrar la página con una subida a medias
+  useEffect(() => {
+    if (!saving) return
+    const warn = (e: BeforeUnloadEvent) => e.preventDefault()
+    window.addEventListener('beforeunload', warn)
+    return () => window.removeEventListener('beforeunload', warn)
+  }, [saving])
+
+  // Al salir del formulario, cancelar compresiones y subidas en curso
+  const pendingRef = useRef(pending)
+  pendingRef.current = pending
+  useEffect(() => () => pendingRef.current.forEach((p) => p.ctrl.abort()), [])
+
+  const patch = (key: string, change: Partial<Pending>) => setPending((list) => list.map((p) => (p.key === key ? { ...p, ...change } : p)))
+
   function addFiles(files: FileList | File[]) {
-    const next: Pending[] = []
     let skipped = 0
     for (const file of Array.from(files)) {
       const kind = file.type.startsWith('video/') ? 'video' : file.type.startsWith('image/') ? 'image' : null
-      if (!kind || file.size > MAX_UPLOAD_MB * 1024 * 1024) {
+      if (!kind) {
         skipped++
         continue
       }
-      next.push({ key: uid(), file, kind })
+      const item: Pending = { key: uid(), file, kind, stage: 'preparing', progress: 0, ctrl: new AbortController() }
+      setPending((list) => [...list, item])
+      const job =
+        kind === 'video'
+          ? prepareVideo(file, (progress) => patch(item.key, { progress }), item.ctrl.signal, ({ estimatedBytes }) => patch(item.key, { estimate: estimatedBytes }))
+          : prepareImage(file)
+      job
+        .then((prepared) => patch(item.key, { stage: 'ready', prepared, progress: 1 }))
+        .catch((e) => {
+          if (item.ctrl.signal.aborted) return
+          if (!(e instanceof PrepareError)) console.error(e)
+          patch(item.key, { stage: 'rejected', message: e instanceof PrepareError ? e.message : 'No se ha podido preparar este archivo.' })
+        })
     }
-    setPending((p) => [...p, ...next])
-    setError(skipped ? `${skipped} archivo${skipped > 1 ? 's' : ''} no se añadió: solo fotos o vídeos de hasta ${MAX_UPLOAD_MB} MB.` : undefined)
+    setError(skipped ? `${skipped} archivo${skipped > 1 ? 's' : ''} no se añadió: solo se pueden subir fotos y vídeos.` : undefined)
+  }
+
+  function removePending(p: Pending) {
+    p.ctrl.abort()
+    setPending((list) => list.filter((x) => x.key !== p.key))
   }
 
   async function submit(e?: FormEvent) {
@@ -62,9 +129,12 @@ export function SpotForm({ spot, draft, onCancel, onSaved }: Props) {
       nameInput.current?.focus()
       return
     }
+    if (pending.some((p) => p.stage === 'preparing')) {
+      setError('Espera a que terminen de prepararse las fotos y vídeos.')
+      return
+    }
     setSaving(true)
-    const now = Date.now()
-    const id = spot?.id ?? uid()
+    setError(undefined)
     const record: Spot = {
       id,
       name: name.trim(),
@@ -75,18 +145,49 @@ export function SpotForm({ spot, draft, onCancel, onSaved }: Props) {
       lng: draft.lng,
       address: draft.address ?? spot?.address,
       author: spot?.author,
-      createdAt: spot?.createdAt ?? now,
-      updatedAt: now,
+      createdAt,
+      updatedAt: Date.now(),
     }
     try {
-      await saveSpot(record, pending, existing.filter((m) => removed.has(m.id)))
-      onSaved(id, !spot)
+      await saveSpotRecord(record, existing.filter((m) => removed.has(m.id)))
     } catch (err) {
       console.error(err)
-      setError('No se pudo guardar. Revisa la conexión y vuelve a probar.')
+      setError('No se pudo guardar la concha. Revisa la conexión y vuelve a probar.')
       setSaving(false)
+      return
     }
+
+    // Subir uno a uno lo que esté listo (o lo que falló antes)
+    let failed = 0
+    for (const p of pendingRef.current.filter((x) => x.stage === 'ready' || x.stage === 'failed')) {
+      if (p.ctrl.signal.aborted) continue
+      patch(p.key, { stage: 'uploading', progress: 0 })
+      try {
+        await uploadSpotFile(id, { blob: p.prepared!.blob, name: p.prepared!.name, kind: p.kind }, (progress) => patch(p.key, { progress }), p.ctrl.signal)
+        patch(p.key, { stage: 'done', progress: 1 })
+      } catch (err) {
+        if (p.ctrl.signal.aborted) continue
+        console.error(err)
+        failed++
+        patch(p.key, { stage: 'failed' })
+      }
+    }
+    await refreshNow()
+
+    if (failed) {
+      setError(
+        `La concha está guardada, pero ${failed === 1 ? 'un archivo no se pudo subir' : `${failed} archivos no se pudieron subir`}. Revisa la conexión y pulsa «Guardar» otra vez: seguirá por donde iba.`,
+      )
+      setSaving(false)
+      return
+    }
+    onSaved(id, !spot)
   }
+
+  const preparing = pending.some((p) => p.stage === 'preparing')
+  const uploads = pending.filter((p) => p.stage === 'uploading' || p.stage === 'done')
+  const uploadProgress = uploads.length ? uploads.reduce((a, p) => a + p.progress, 0) / uploads.length : 0
+  const mediaNotes = pending.filter((p) => p.kind === 'video' || p.stage === 'rejected' || p.stage === 'failed' || p.stage === 'uploading')
 
   return (
     <form
@@ -147,13 +248,29 @@ export function SpotForm({ spot, draft, onCancel, onSaved }: Props) {
                 <Thumb key={m.id} src={m.url} kind={m.kind} onRemove={() => setRemoved((r) => new Set(r).add(m.id))} />
               ))}
               {pending.map((p) => (
-                <Thumb key={p.key} blob={p.file} kind={p.kind} onRemove={() => setPending((list) => list.filter((x) => x.key !== p.key))} />
+                <Thumb key={p.key} blob={p.prepared?.blob ?? p.file} kind={p.kind} pending={p} onRemove={() => removePending(p)} />
               ))}
               <button type="button" className="thumb-add" onClick={() => fileInput.current?.click()}>
                 <Icon.Image size={22} />
                 <span>Añadir</span>
               </button>
             </div>
+            {mediaNotes.length > 0 && (
+              <ul className="media-notes" aria-live="polite">
+                {mediaNotes.map((p) => (
+                  <li key={p.key} className={`media-note is-${p.stage}`}>
+                    <span className="media-note-name">{p.prepared?.name ?? p.file.name}</span>
+                    <span className="media-note-text">{describe(p)}</span>
+                    {(p.stage === 'uploading' || (p.stage === 'preparing' && p.estimate !== undefined)) && (
+                      <span className="media-note-bar" aria-hidden="true">
+                        <span style={{ transform: `scaleX(${p.progress})` }} />
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+            <p className="media-hint">Los vídeos se comprimen en tu móvil antes de subirse (máximo 3 minutos).</p>
             <input
               ref={fileInput}
               type="file"
@@ -188,26 +305,53 @@ export function SpotForm({ spot, draft, onCancel, onSaved }: Props) {
       </div>
 
       <footer className="panel-foot">
-        <button type="button" className="btn btn-ghost" onClick={onCancel}>
+        <button
+          type="button"
+          className="btn btn-ghost"
+          onClick={() => {
+            pending.forEach((p) => p.ctrl.abort())
+            onCancel()
+          }}
+        >
           Cancelar
         </button>
-        <button type="submit" className="btn btn-primary" disabled={saving}>
-          {saving ? (pending.length ? 'Subiendo…' : 'Guardando…') : spot ? 'Guardar cambios' : 'Guardar concha'}
+        <button type="submit" className="btn btn-primary" disabled={saving || preparing}>
+          {saving
+            ? uploads.length
+              ? `Subiendo… ${pct(uploadProgress)}`
+              : 'Guardando…'
+            : preparing
+              ? 'Preparando archivos…'
+              : spot
+                ? 'Guardar cambios'
+                : 'Guardar concha'}
         </button>
       </footer>
     </form>
   )
 }
 
-function Thumb({ blob, src, kind, onRemove }: { blob?: Blob; src?: string; kind: 'image' | 'video'; onRemove: () => void }) {
+function Thumb({ blob, src, kind, pending, onRemove }: { blob?: Blob; src?: string; kind: 'image' | 'video'; pending?: Pending; onRemove: () => void }) {
   const local = useObjectUrl(blob)
   const url = src ?? local
+  const stage = pending?.stage
+  const busy = stage === 'preparing' || stage === 'uploading'
   return (
-    <div className="thumb">
+    <div className={`thumb ${stage ? `is-${stage}` : ''}`}>
       {url && (kind === 'image' ? <img src={url} alt="" /> : <video src={url} muted playsInline preload="metadata" />)}
-      {kind === 'video' && (
+      {kind === 'video' && !busy && stage !== 'rejected' && stage !== 'failed' && (
         <span className="thumb-play">
           <Icon.Play size={14} />
+        </span>
+      )}
+      {busy && (
+        <span className="thumb-overlay" aria-hidden="true">
+          <span className="thumb-pct tabular">{stage === 'preparing' && kind === 'image' ? '…' : pct(pending!.progress)}</span>
+        </span>
+      )}
+      {(stage === 'rejected' || stage === 'failed') && (
+        <span className="thumb-overlay is-bad" aria-hidden="true">
+          !
         </span>
       )}
       <button type="button" className="thumb-remove" onClick={onRemove} aria-label="Quitar archivo">

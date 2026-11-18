@@ -16,6 +16,14 @@ Un mapa del mundo real en modo oscuro donde guardar **spots** (aquí los llamamo
 
 Las conchas, fotos y vídeos se guardan en Supabase y se ven al momento en todos los dispositivos.
 
+## Fotos y vídeos
+
+- Los vídeos se comprimen en el propio móvil antes de subirse (720p, ~2 Mbps, con WebCodecs vía
+  `mediabunny`): 30 s de vídeo del móvil (~90 MB) quedan en ~8 MB. Máximo 3 minutos.
+- Las fotos se reducen a 2048 px en JPEG (~0,5 MB).
+- La subida es reanudable (TUS, trozos de 6 MB): si se corta la conexión, sigue por donde iba.
+- Límite del plan gratis de Supabase: 50 MB por archivo y 1 GB en total.
+
 ## Cuentas
 
 Para usar la app hay que entrar con usuario y contraseña. Para crear una cuenta hay que pasar

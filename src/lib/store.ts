@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react'
-import { supabase } from './supabase'
+import * as tus from 'tus-js-client'
+import { supabase, SUPABASE_KEY, SUPABASE_URL } from './supabase'
 import { currentUsername } from './auth'
 import { db, uid, type Media, type ShellColor, type Spot } from './db'
 
@@ -13,7 +14,6 @@ import { db, uid, type Media, type ShellColor, type Spot } from './db'
 export const isConfigured = true
 
 const BUCKET = 'media'
-export const MAX_UPLOAD_MB = 50
 
 interface SpotRow {
   id: string
@@ -185,17 +185,69 @@ async function uploadMedia(spotId: string, files: { blob: Blob; name: string; ki
   }
 }
 
-export async function saveSpot(spot: Spot, newFiles: { file: File; kind: 'image' | 'video' }[], removed: Media[]) {
-  if (!supabase) throw new Error('Supabase sin configurar')
+/** Guarda los datos de la concha y borra los archivos quitados. Las fotos y vídeos nuevos se suben aparte. */
+export async function saveSpotRecord(spot: Spot, removed: Media[]) {
   const { error } = await supabase.from('spots').upsert(toRow({ ...spot, author: spot.author ?? currentUsername() }))
   if (error) throw error
   if (removed.length) {
     await supabase.from('media').delete().in('id', removed.map((m) => m.id))
     await supabase.storage.from(BUCKET).remove(removed.map((m) => m.path))
   }
-  await uploadMedia(spot.id, newFiles.map((f) => ({ blob: f.file, name: f.file.name, kind: f.kind })))
-  await refresh()
 }
+
+/**
+ * Sube una foto o vídeo con subida reanudable (TUS, trozos de 6 MB): si se corta la
+ * conexión, reintenta y sigue por donde iba en vez de empezar de cero.
+ */
+export async function uploadSpotFile(
+  spotId: string,
+  file: { blob: Blob; name: string; kind: 'image' | 'video' },
+  onProgress: (fraction: number) => void,
+  signal?: AbortSignal,
+) {
+  const { data } = await supabase.auth.getSession()
+  const token = data.session?.access_token ?? SUPABASE_KEY
+  const id = uid()
+  const path = `${spotId}/${id}.${extOf(file.name, file.blob.type, file.kind)}`
+  const contentType = file.blob.type || (file.kind === 'video' ? 'video/mp4' : 'image/jpeg')
+
+  await new Promise<void>((resolve, reject) => {
+    // Cancelar solo mientras la subida está en curso (después ya no hay nada que cancelar)
+    const onAbort = () => {
+      upload.abort(true)
+      reject(new DOMException('Cancelado', 'AbortError'))
+    }
+    const finish = (fn: () => void) => {
+      signal?.removeEventListener('abort', onAbort)
+      fn()
+    }
+    const upload = new tus.Upload(file.blob, {
+      endpoint: `${SUPABASE_URL}/storage/v1/upload/resumable`,
+      retryDelays: [0, 1000, 3000, 5000, 10000, 20000],
+      headers: { authorization: `Bearer ${token}`, apikey: SUPABASE_KEY, 'x-upsert': 'false' },
+      uploadDataDuringCreation: true,
+      removeFingerprintOnSuccess: true,
+      metadata: { bucketName: BUCKET, objectName: path, contentType, cacheControl: '3600' },
+      chunkSize: 6 * 1024 * 1024, // Supabase exige trozos de 6 MB
+      onProgress: (sent, total) => onProgress(total ? sent / total : 0),
+      onError: (err) => finish(() => reject(err)),
+      onSuccess: () => finish(resolve),
+    })
+    if (signal?.aborted) return reject(new DOMException('Cancelado', 'AbortError'))
+    signal?.addEventListener('abort', onAbort)
+    upload.findPreviousUploads().then((prev) => {
+      if (prev.length) upload.resumeFromPreviousUpload(prev[0])
+      upload.start()
+    })
+  })
+
+  const { error } = await supabase
+    .from('media')
+    .insert({ id, spot_id: spotId, path, kind: file.kind, name: file.name, created_at: new Date().toISOString() })
+  if (error) throw error
+}
+
+export const refreshNow = () => refresh()
 
 export async function deleteSpot(spot: Spot) {
   if (!supabase) throw new Error('Supabase sin configurar')
