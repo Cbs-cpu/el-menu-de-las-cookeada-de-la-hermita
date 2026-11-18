@@ -85,3 +85,41 @@ export function shellSvg(color: string, size = 34) {
 export function Shell({ color, size = 34 }: { color: string; size?: number }) {
   return <span className="shell-icon" style={{ width: size, height: size }} dangerouslySetInnerHTML={{ __html: shellSvg(color, size) }} />
 }
+
+/** El CHEF, dios de las cookeadas: cangrejo rojo con gorro de cocinero. */
+export function ChefCrab({ size = 96, className }: { size?: number; className?: string }) {
+  const hat = size * 0.62
+  return (
+    <span className={`hat-crab chef-crab ${className ?? ''}`} style={{ paddingTop: hat * 0.62 }} aria-hidden="true">
+      <svg className="hat-crab-hat" viewBox="0 0 60 50" width={hat} height={hat * 0.83}>
+        <path
+          d="M14 34 C4 34 3 18 14 18 C14 7 28 3 32 11 C38 3 54 7 49 20 C58 22 56 35 46 34 Z"
+          fill="#FFF8EE"
+          stroke="#B9AFA3"
+          strokeWidth="2"
+          strokeLinejoin="round"
+        />
+        <rect x="15" y="32" width="31" height="12" rx="2.5" fill="#FFF8EE" stroke="#B9AFA3" strokeWidth="2" />
+        <path d="M23 34 v8 M30.5 34 v8 M38 34 v8" stroke="#D9D0C4" strokeWidth="1.6" strokeLinecap="round" />
+      </svg>
+      <Crab color="#E5432F" size={size} />
+    </span>
+  )
+}
+
+/** El mago: cangrejo violeta con sombrero de estrellas. */
+export function WizardCrabArt({ size = 84, className }: { size?: number; className?: string }) {
+  const hat = size * 0.72
+  return (
+    <span className={`hat-crab ${className ?? ''}`} style={{ paddingTop: hat * 0.56 }} aria-hidden="true">
+      <svg className="hat-crab-hat is-wizard" viewBox="0 0 60 50" width={hat} height={hat * 0.83}>
+        <path d="M30 2 L46 40 L14 40 Z" fill="#6B4FD8" stroke="#3F2A93" strokeWidth="2" strokeLinejoin="round" />
+        <path d="M30 2 Q38 6 42 14" fill="none" stroke="#9C86FF" strokeWidth="2" strokeLinecap="round" />
+        <ellipse cx="30" cy="41" rx="26" ry="6" fill="#6B4FD8" stroke="#3F2A93" strokeWidth="2" />
+        <path d="M27 20 l1.4 3 3.2.4-2.4 2.2.6 3.2-2.8-1.6-2.8 1.6.6-3.2-2.4-2.2 3.2-.4z" fill="#F2B44C" />
+        <circle cx="35" cy="31" r="1.6" fill="#F2B44C" />
+      </svg>
+      <Crab color="#9C86FF" size={size} />
+    </span>
+  )
+}

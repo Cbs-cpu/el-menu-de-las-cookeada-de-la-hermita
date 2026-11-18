@@ -8,7 +8,10 @@ import { SearchBar } from './components/SearchBar'
 import { SpotForm } from './components/SpotForm'
 import { SpotDetail } from './components/SpotDetail'
 import { SpotList } from './components/SpotList'
-import { SectionMenu } from './components/SectionMenu'
+import { SectionMenu, type SectionId } from './components/SectionMenu'
+import { Cercanas } from './components/sections/Cercanas'
+import { Aleatoria } from './components/sections/Aleatoria'
+import { DelDia } from './components/sections/DelDia'
 import { Crab } from './components/Art'
 import { Icon } from './components/ui'
 
@@ -21,6 +24,7 @@ export default function App() {
   const [draft, setDraft] = useState<Draft | null>(null)
   const [mode, setMode] = useState<MapMode>('mapa')
   const [menuOpen, setMenuOpen] = useState(false)
+  const [section, setSection] = useState<SectionId>('conchas')
   const [userPos, setUserPos] = useState<{ lat: number; lng: number } | null>(null)
   const [locating, setLocating] = useState(false)
   const map = useRef<MapHandle>(null)
@@ -97,6 +101,8 @@ export default function App() {
 
   return (
     <div className="app">
+      {/* Con una sección abierta, el mapa queda debajo: ni clics ni tabulador */}
+      <div className="map-section" inert={section !== 'conchas'}>
       <MapView
         ref={map}
         spots={spots}
@@ -224,7 +230,21 @@ export default function App() {
         </button>
       )}
 
-      <SectionMenu open={menuOpen} onClose={() => setMenuOpen(false)} count={spots.length} />
+      </div>
+
+      {section !== 'conchas' && (
+        <SectionOverlay
+          section={section}
+          onMenu={() => setMenuOpen(true)}
+          onMap={() => setSection('conchas')}
+          onOpenSpot={(s) => {
+            setSection('conchas')
+            openSpot(s)
+          }}
+        />
+      )}
+
+      <SectionMenu open={menuOpen} onClose={() => setMenuOpen(false)} count={spots.length} current={section} onSelect={setSection} />
 
       <Toaster
         position="bottom-center"
@@ -234,4 +254,11 @@ export default function App() {
       />
     </div>
   )
+}
+
+function SectionOverlay({ section, ...props }: { section: SectionId; onMenu: () => void; onMap: () => void; onOpenSpot: (s: Spot) => void }) {
+  if (section === 'cercanas') return <Cercanas {...props} />
+  if (section === 'aleatoria') return <Aleatoria {...props} />
+  if (section === 'del-dia') return <DelDia {...props} />
+  return null
 }

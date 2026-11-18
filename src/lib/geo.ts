@@ -65,3 +65,35 @@ export async function reverseGeocode(lat: number, lng: number, signal?: AbortSig
 }
 
 export const formatCoords = (lat: number, lng: number) => `${lat.toFixed(5)}, ${lng.toFixed(5)}`
+
+/** Ciudad (o pueblo) de un punto, para "conchas de tu ciudad". */
+export async function reverseCity(lat: number, lng: number): Promise<string | undefined> {
+  try {
+    const res = await fetch(`https://photon.komoot.io/reverse?lat=${lat}&lon=${lng}`)
+    if (!res.ok) return undefined
+    const data: { features: PhotonFeature[] } = await res.json()
+    const p = data.features[0]?.properties
+    return p?.city ?? p?.name ?? undefined
+  } catch {
+    return undefined
+  }
+}
+
+/** Distancia en km entre dos puntos (fórmula del haversine). */
+export function distanceKm(a: { lat: number; lng: number }, b: { lat: number; lng: number }) {
+  const R = 6371
+  const rad = (d: number) => (d * Math.PI) / 180
+  const dLat = rad(b.lat - a.lat)
+  const dLng = rad(b.lng - a.lng)
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(dLng / 2) ** 2
+  return 2 * R * Math.asin(Math.sqrt(h))
+}
+
+export function formatDistance(km: number) {
+  if (km < 1) return `${Math.max(10, Math.round((km * 1000) / 10) * 10)} m`
+  if (km < 10) return `${km.toLocaleString('es-ES', { maximumFractionDigits: 1 })} km`
+  return `${Math.round(km).toLocaleString('es-ES')} km`
+}
+
+export const normalizeText = (s: string) =>
+  s.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase().trim()

@@ -3,9 +3,24 @@ import { Crab } from './Art'
 import { Icon } from './ui'
 import { signOut, usernameOf, useSession } from '../lib/auth'
 
-const SECTIONS = [{ id: 'conchas', name: 'Conchas para ermitaños', desc: 'El mapa de spots de la ermita', color: '#FF6A2B', ready: true }]
+export type SectionId = 'conchas' | 'cercanas' | 'aleatoria' | 'del-dia'
 
-export function SectionMenu({ open, onClose, count }: { open: boolean; onClose: () => void; count: number }) {
+export const SECTIONS: { id: SectionId; name: string; desc: string; color: string }[] = [
+  { id: 'conchas', name: 'Conchas para ermitaños', desc: 'El mapa de spots de la ermita', color: '#FF6A2B' },
+  { id: 'cercanas', name: 'Conchas más cercanas', desc: 'Las mejores a la distancia que elijas', color: '#3FBFAE' },
+  { id: 'aleatoria', name: 'Concha aleatoria', desc: 'Una concha al azar de tu ciudad', color: '#F2B44C' },
+  { id: 'del-dia', name: 'Concha del día', desc: 'Tu misión de hoy, por orden del CHEF', color: '#E5432F' },
+]
+
+interface Props {
+  open: boolean
+  onClose: () => void
+  count: number
+  current: SectionId
+  onSelect: (id: SectionId) => void
+}
+
+export function SectionMenu({ open, onClose, count, current, onSelect }: Props) {
   const session = useSession()
   const closeBtn = useRef<HTMLButtonElement>(null)
   useEffect(() => {
@@ -35,13 +50,19 @@ export function SectionMenu({ open, onClose, count }: { open: boolean; onClose: 
         <ul className="menu-list">
           {SECTIONS.map((s) => (
             <li key={s.id}>
-              <button type="button" className="menu-item is-current" aria-current="page" onClick={onClose}>
+              <button
+                type="button"
+                className={`menu-item ${s.id === current ? 'is-current' : ''}`}
+                aria-current={s.id === current ? 'page' : undefined}
+                onClick={() => {
+                  onSelect(s.id)
+                  onClose()
+                }}
+              >
                 <Crab color={s.color} size={34} />
                 <span>
                   <strong>{s.name}</strong>
-                  <small>
-                    {s.desc}, {count} {count === 1 ? 'concha' : 'conchas'}
-                  </small>
+                  <small>{s.id === 'conchas' ? `${s.desc}, ${count} ${count === 1 ? 'concha' : 'conchas'}` : s.desc}</small>
                 </span>
               </button>
             </li>
