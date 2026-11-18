@@ -1,6 +1,12 @@
 import { useEffect, useImperativeHandle, useRef, type Ref } from 'react'
-import { Map as MLMap, Marker, type StyleSpecification } from 'maplibre-gl'
+import { Map as MLMap, Marker, setWorkerUrl, type StyleSpecification } from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
+// MapLibre calcula la URL de su worker en tiempo de ejecución y Vite no la detecta,
+// así que en producción (Vercel) el worker no se copiaba y el mapa salía en blanco.
+// Importándolo con ?url, Vite lo incluye en la build y le pasamos la URL buena.
+import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url'
+
+setWorkerUrl(workerUrl)
 import { SHELL_COLORS, type Spot } from '../lib/db'
 import { shellSvg } from './Art'
 
