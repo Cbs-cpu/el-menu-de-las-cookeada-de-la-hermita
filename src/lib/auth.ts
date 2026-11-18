@@ -55,7 +55,7 @@ export function useSession() {
 }
 
 export const usernameOf = (s: Session | null | undefined) =>
-  (s?.user.user_metadata?.username as string | undefined) ?? s?.user.email?.split('@')[0] ?? 'hermitaño'
+  (s?.user.user_metadata?.username as string | undefined) ?? s?.user.email?.split('@')[0] ?? 'ermitaño'
 
 export function currentUsername() {
   return session ? usernameOf(session) : undefined

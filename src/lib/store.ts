@@ -4,7 +4,7 @@ import { currentUsername } from './auth'
 import { db, uid, type Media, type ShellColor, type Spot } from './db'
 
 /*
- * Datos globales de la hermita en Supabase.
+ * Datos globales de la ermita en Supabase.
  * - Tabla `spots` y tabla `media` (ver supabase/schema.sql).
  * - Fotos y vídeos en el bucket público `media` de Storage.
  * - Realtime: cualquier cambio de otro dispositivo se refleja al momento.
@@ -154,7 +154,7 @@ function subscribe(cb: () => void) {
   return () => listeners.delete(cb)
 }
 
-export function useHermita() {
+export function useErmita() {
   return useSyncExternalStore(subscribe, () => state)
 }
 

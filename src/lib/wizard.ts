@@ -25,7 +25,7 @@ export const WIZARD_QUESTIONS: WizardQuestion[] = [
   { word: 'El studio de ezzey', answer: true },
   { word: 'La xinos room', answer: false },
   { word: 'La panic room', answer: false },
-  { word: 'La hermita', answer: false, last: true },
+  { word: 'La ermita', answer: false, last: true },
 ]
 
 /** Baraja las preguntas (Fisher–Yates) y deja las marcadas como `last` al final. */

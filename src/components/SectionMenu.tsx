@@ -3,7 +3,7 @@ import { Crab } from './Art'
 import { Icon } from './ui'
 import { signOut, usernameOf, useSession } from '../lib/auth'
 
-const SECTIONS = [{ id: 'conchas', name: 'Conchas para hermitaños', desc: 'El mapa de spots de la hermita', color: '#FF6A2B', ready: true }]
+const SECTIONS = [{ id: 'conchas', name: 'Conchas para ermitaños', desc: 'El mapa de spots de la ermita', color: '#FF6A2B', ready: true }]
 
 export function SectionMenu({ open, onClose, count }: { open: boolean; onClose: () => void; count: number }) {
   const session = useSession()
@@ -30,7 +30,7 @@ export function SectionMenu({ open, onClose, count }: { open: boolean; onClose: 
             <Icon.Close size={20} />
           </button>
         </header>
-        <h1 className="menu-title">El menú de cookeadas de la hermita</h1>
+        <h1 className="menu-title">El menú de cookeadas de la ermita</h1>
 
         <ul className="menu-list">
           {SECTIONS.map((s) => (

@@ -8,14 +8,14 @@ type Mode = 'login' | 'register'
 const ERRORS: Record<AuthErrorKind, string> = {
   credenciales: 'Usuario o contraseña incorrectos.',
   existe: 'Ese usuario ya existe. Elige otro nombre o entra con él.',
-  red: 'No hay conexión con la hermita. Revisa internet y vuelve a probar.',
+  red: 'No hay conexión con la ermita. Revisa internet y vuelve a probar.',
   confirmar:
     'Supabase está pidiendo confirmar el email. Hay que desactivar "Confirm email" en Supabase (Authentication → Sign In / Providers → Email).',
   'registro-cerrado': 'El registro está desactivado en Supabase. Hay que activar "Allow new users to sign up" en Authentication → Sign In / Providers.',
   'email-invalido': 'Supabase no acepta el email interno de esta cuenta. Prueba con otro nombre de usuario (solo letras y números).',
   'contrasena-debil': 'Supabase pide una contraseña más segura. Prueba con una más larga, con letras y números.',
   'demasiados-intentos': 'Demasiados intentos seguidos. Espera un minuto y vuelve a probar.',
-  desconocido: 'Algo ha fallado al hablar con la hermita.',
+  desconocido: 'Algo ha fallado al hablar con la ermita.',
 }
 
 const describe = (e: AuthError) => ERRORS[e.kind] + (e.kind === 'desconocido' && e.detail ? ` (${e.detail})` : '')
@@ -84,7 +84,7 @@ export function AuthScreen() {
             <Crab color="#FF8E9E" size={32} />
           </div>
           <h1 id="auth-title" className="auth-title">
-            El menú de cookeadas de la hermita
+            El menú de cookeadas de la ermita
           </h1>
 
           <div className="segmented auth-tabs" role="tablist" aria-label="Entrar o crear cuenta">
@@ -223,7 +223,7 @@ function WizardTest({ onPass, onBack }: { onPass: () => Promise<void>; onBack: (
       {result === 'failed' && (
         <div className="wizard-end">
           <h2>El mago te ha pillado</h2>
-          <p>Has fallado con «{failedOn}». Para entrar en la hermita tienes que acertarlas todas.</p>
+          <p>Has fallado con «{failedOn}». Para entrar en la ermita tienes que acertarlas todas.</p>
           <div className="wizard-end-actions">
             <button type="button" className="btn btn-ghost" onClick={onBack}>
               Volver al registro

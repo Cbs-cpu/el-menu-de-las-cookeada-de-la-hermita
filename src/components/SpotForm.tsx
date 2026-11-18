@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { SHELL_COLORS, uid, type ShellColor, type Spot } from '../lib/db'
-import { MAX_UPLOAD_MB, mediaFor, saveSpot, useHermita } from '../lib/store'
+import { MAX_UPLOAD_MB, mediaFor, saveSpot, useErmita } from '../lib/store'
 import { formatCoords } from '../lib/geo'
 import { Shell } from './Art'
 import { Icon, StarInput, useObjectUrl } from './ui'
@@ -32,7 +32,7 @@ export function SpotForm({ spot, draft, onCancel, onSaved }: Props) {
   const fileInput = useRef<HTMLInputElement>(null)
   const nameInput = useRef<HTMLInputElement>(null)
 
-  const { media: allMedia } = useHermita()
+  const { media: allMedia } = useErmita()
   const existing = spot ? mediaFor(allMedia, spot.id) : []
   const kept = existing.filter((m) => !removed.has(m.id))
 

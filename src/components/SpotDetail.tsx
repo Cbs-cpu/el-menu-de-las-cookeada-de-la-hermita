@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { SHELL_COLORS, type Media, type Spot } from '../lib/db'
-import { deleteSpot, mediaFor, useHermita } from '../lib/store'
+import { deleteSpot, mediaFor, useErmita } from '../lib/store'
 import { formatCoords } from '../lib/geo'
 import { Crab } from './Art'
 import { Icon, Stars } from './ui'
@@ -14,7 +14,7 @@ interface Props {
 }
 
 export function SpotDetail({ spot, onBack, onEdit, onDeleted }: Props) {
-  const media = mediaFor(useHermita().media, spot.id)
+  const media = mediaFor(useErmita().media, spot.id)
   const [viewer, setViewer] = useState<number | null>(null)
   const [confirming, setConfirming] = useState(false)
   const color = SHELL_COLORS[spot.shell].hex

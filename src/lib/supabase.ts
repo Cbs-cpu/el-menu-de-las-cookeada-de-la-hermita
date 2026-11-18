@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 
-// Proyecto de Supabase de la hermita. La clave "publishable" es pública por diseño
+// Proyecto de Supabase de la ermita. La clave "publishable" es pública por diseño
 // (va dentro de la web); lo que protege los datos son las políticas de supabase/*.sql,
 // que solo dejan leer y escribir a usuarios con sesión iniciada.
 // Se pueden sobrescribir con VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY.

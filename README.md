@@ -1,8 +1,8 @@
-# El menú de cookeadas de la hermita 🦀
+# El menú de cookeadas de la ermita 🦀
 
-App web de la hermita. Va por secciones; la primera es:
+App web de la ermita. Va por secciones; la primera es:
 
-## Conchas para hermitaños
+## Conchas para ermitaños
 
 Un mapa del mundo real en modo oscuro donde guardar **spots** (aquí los llamamos *conchas*):
 

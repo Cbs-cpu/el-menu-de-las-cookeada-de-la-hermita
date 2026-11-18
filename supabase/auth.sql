@@ -1,4 +1,4 @@
--- El menú de cookeadas de la hermita · Login y registro
+-- El menú de cookeadas de la ermita · Login y registro
 -- Ejecutar DESPUÉS de schema.sql: Supabase → SQL Editor → New query → Run.
 -- Se puede ejecutar más de una vez sin romper nada.
 

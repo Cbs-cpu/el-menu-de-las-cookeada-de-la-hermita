@@ -1,4 +1,4 @@
--- El menú de cookeadas de la hermita · Conchas para hermitaños
+-- El menú de cookeadas de la ermita · Conchas para ermitaños
 -- Pega este archivo entero en Supabase → SQL Editor → New query → Run.
 -- Se puede ejecutar más de una vez sin romper nada.
 
