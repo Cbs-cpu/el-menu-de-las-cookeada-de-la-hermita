@@ -5,8 +5,10 @@ export interface Spot {
   name: string
   lat: number
   lng: number
-  rating: number // 0–5, 0 = sin valorar
-  notes: string
+  rating: number // media de las reseñas (0–5 en pasos de 0,5; 0 = sin valorar)
+  reviewCount?: number
+  notes: string // descripción del sitio
+  tags?: SpotTag[]
   address?: string
   shell: ShellColor
   author?: string // nombre de usuario de quien la puso
@@ -75,7 +77,14 @@ export interface SacredVote {
   userId: string
 }
 
-export type NotificationKind = 'sacred_review' | 'sacred_vote' | 'sacred_approved' | 'sacred_rejected'
+export type NotificationKind =
+  | 'sacred_review'
+  | 'sacred_vote'
+  | 'sacred_approved'
+  | 'sacred_rejected'
+  | 'challenge_review'
+  | 'challenge_approved'
+  | 'challenge_rejected'
 
 export interface AppNotification {
   id: string
@@ -84,6 +93,61 @@ export interface AppNotification {
   body: string
   spotId?: string
   requestId?: string
+  challengeId?: string
   read: boolean
   createdAt: number
+}
+
+/** Características de una concha, para filtrar. */
+export const SPOT_TAGS = {
+  vistas: 'Con vistas',
+  tranquilo: 'Tranquila, poca gente',
+  cubierto: 'A cubierto',
+  sentarse: 'Para sentarse',
+  noche: 'Buena de noche',
+  sombra: 'Con sombra',
+  grupo: 'Para ir en grupo',
+  naturaleza: 'Naturaleza',
+} as const
+
+export type SpotTag = keyof typeof SPOT_TAGS
+
+export interface Review {
+  id: string
+  spotId: string
+  userId: string
+  username: string
+  rating: number // 0,5–5 en pasos de 0,5
+  body: string
+  createdAt: number
+  updatedAt: number
+}
+
+export type ChallengeStatus = 'assigned' | 'submitted' | 'approved' | 'rejected'
+
+export interface Challenge {
+  id: string
+  userId: string
+  username: string
+  spotId: string
+  day: string // AAAA-MM-DD (hora de Madrid)
+  slot: number
+  status: ChallengeStatus
+  videoPath?: string
+  videoUrl?: string
+  recordedAt?: number
+  submittedAt?: number
+  lat?: number
+  lng?: number
+  accuracyM?: number
+  distanceM?: number
+  reviewedAt?: number
+  points: number
+}
+
+export interface RankingRow {
+  userId: string
+  username: string
+  points: number
+  retos: number
 }

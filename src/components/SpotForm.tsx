@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { SHELL_COLORS, uid, type ShellColor, type Spot } from '../lib/db'
-import { mediaFor, refreshNow, saveSpotRecord, uploadSpotFile, useErmita } from '../lib/store'
+import { SHELL_COLORS, SPOT_TAGS, uid, type ShellColor, type Spot, type SpotTag } from '../lib/db'
+import { mediaFor, refreshNow, saveReview, saveSpotRecord, uploadSpotFile, useErmita } from '../lib/store'
 import { isAdminSession, useSession } from '../lib/auth'
 import { SacredBadge } from './Sacred'
 import { formatMB, PrepareError, prepareImage, prepareVideo, type Prepared } from '../lib/media'
@@ -57,10 +57,16 @@ function describe(p: Pending) {
 
 export function SpotForm({ spot, draft, onCancel, onSaved }: Props) {
   const [name, setName] = useState(spot?.name ?? draft.name ?? '')
-  const [rating, setRating] = useState(spot?.rating ?? 0)
+  const session = useSession()
+  const { reviews } = useErmita()
+  // Mi reseña de esta concha (si ya la había valorado)
+  const [myReview] = useState(() => (spot ? reviews.find((r) => r.spotId === spot.id && r.userId === session?.user.id) : undefined))
+  const [rating, setRating] = useState(myReview?.rating ?? 0)
+  const [reviewText, setReviewText] = useState(myReview?.body ?? '')
   const [notes, setNotes] = useState(spot?.notes ?? '')
+  const [tags, setTags] = useState<SpotTag[]>(spot?.tags ?? [])
   const [shell, setShell] = useState<ShellColor>(spot?.shell ?? 'naranja')
-  const admin = isAdminSession(useSession())
+  const admin = isAdminSession(session)
   const [sacred, setSacredFlag] = useState(!!spot?.sacred)
   const [pending, setPending] = useState<Pending[]>([])
   const [removed, setRemoved] = useState<Set<string>>(new Set())
@@ -141,13 +147,18 @@ export function SpotForm({ spot, draft, onCancel, onSaved }: Props) {
       setError('Espera a que terminen de prepararse las fotos y vídeos.')
       return
     }
+    if (!rating && reviewText.trim()) {
+      setError('Ponle estrellas para publicar tu reseña.')
+      return
+    }
     setSaving(true)
     setError(undefined)
     const record: Spot = {
       id,
       name: name.trim(),
-      rating,
+      rating: rating || spot?.rating || 0,
       notes: notes.trim(),
+      tags,
       shell,
       lat: draft.lat,
       lng: draft.lng,
@@ -167,6 +178,17 @@ export function SpotForm({ spot, draft, onCancel, onSaved }: Props) {
       setError('No se pudo guardar la concha. Revisa la conexión y vuelve a probar.')
       setSaving(false)
       return
+    }
+    // Mi valoración y reseña
+    if (rating && (rating !== myReview?.rating || reviewText.trim() !== (myReview?.body ?? ''))) {
+      try {
+        await saveReview(id, rating, reviewText)
+      } catch (err) {
+        console.error(err)
+        setError('La concha está guardada, pero tu reseña no. Vuelve a pulsar «Guardar».')
+        setSaving(false)
+        return
+      }
     }
 
     // Subir uno a uno lo que esté listo (o lo que falló antes)
@@ -237,14 +259,41 @@ export function SpotForm({ spot, draft, onCancel, onSaved }: Props) {
           />
         </label>
 
+        <label className="field">
+          <span className="field-label">Descripción del sitio</span>
+          <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} placeholder="Cómo es, cómo se llega, dónde sentarse…" />
+        </label>
+
+        <fieldset className="field">
+          <legend className="field-label">Características</legend>
+          <div className="tag-picker">
+            {(Object.keys(SPOT_TAGS) as SpotTag[]).map((t) => (
+              <label key={t} className={`tag-chip ${tags.includes(t) ? 'is-on' : ''}`}>
+                <input
+                  type="checkbox"
+                  checked={tags.includes(t)}
+                  onChange={(e) => setTags((list) => (e.target.checked ? [...list, t] : list.filter((x) => x !== t)))}
+                />
+                {SPOT_TAGS[t]}
+              </label>
+            ))}
+          </div>
+        </fieldset>
+
         <div className="field">
-          <span className="field-label">Valoración</span>
+          <span className="field-label">Tu valoración</span>
           <StarInput value={rating} onChange={setRating} />
         </div>
 
         <label className="field">
-          <span className="field-label">Reseña y notas</span>
-          <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={5} placeholder="Qué se come, con quién ir, a qué hora hay sitio…" />
+          <span className="field-label">Tu reseña</span>
+          <textarea
+            value={reviewText}
+            onChange={(e) => setReviewText(e.target.value)}
+            rows={4}
+            placeholder="Qué tal se cookea aquí: ambiente, vistas, gente, a qué hora ir…"
+          />
+          <small className="field-hint">Saldrá con tu nombre. Los demás pueden dejar la suya desde la ficha de la concha.</small>
         </label>
 
         <div className="field">

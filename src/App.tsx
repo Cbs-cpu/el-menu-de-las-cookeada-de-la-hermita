@@ -10,7 +10,9 @@ import { SpotDetail } from './components/SpotDetail'
 import { SpotList } from './components/SpotList'
 import { SectionMenu, type SectionId } from './components/SectionMenu'
 import { NotificationsButton, NotificationsPanel } from './components/Notifications'
-import { Cercanas } from './components/sections/Cercanas'
+import { Explorar } from './components/sections/Explorar'
+import { Retos } from './components/sections/Retos'
+import { Ranking } from './components/sections/Ranking'
 import { Aleatoria } from './components/sections/Aleatoria'
 import { DelDia } from './components/sections/DelDia'
 import { Crab } from './components/Art'
@@ -242,6 +244,7 @@ export default function App() {
           section={section}
           onMenu={() => setMenuOpen(true)}
           onMap={() => setSection('conchas')}
+          onSection={setSection}
           onOpenSpot={(s) => {
             setSection('conchas')
             openSpot(s)
@@ -261,8 +264,20 @@ export default function App() {
   )
 }
 
-function SectionOverlay({ section, ...props }: { section: SectionId; onMenu: () => void; onMap: () => void; onOpenSpot: (s: Spot) => void }) {
-  if (section === 'cercanas') return <Cercanas {...props} />
+function SectionOverlay({
+  section,
+  onSection,
+  ...props
+}: {
+  section: SectionId
+  onMenu: () => void
+  onMap: () => void
+  onOpenSpot: (s: Spot) => void
+  onSection: (s: SectionId) => void
+}) {
+  if (section === 'explorar') return <Explorar {...props} />
+  if (section === 'retos') return <Retos onMenu={props.onMenu} onOpenSpot={props.onOpenSpot} onRanking={() => onSection('ranking')} />
+  if (section === 'ranking') return <Ranking onMenu={props.onMenu} onRetos={() => onSection('retos')} />
   if (section === 'aleatoria') return <Aleatoria {...props} />
   if (section === 'del-dia') return <DelDia {...props} />
   return null

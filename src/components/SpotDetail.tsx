@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
-import { SHELL_COLORS, type Media, type Spot } from '../lib/db'
+import { SHELL_COLORS, SPOT_TAGS, type Media, type Spot } from '../lib/db'
 import { deleteSpot, mediaFor, useErmita } from '../lib/store'
 import { formatCoords } from '../lib/geo'
 import { Crab } from './Art'
-import { Icon, Stars } from './ui'
+import { formatRating, Icon, Stars } from './ui'
+import { Reviews } from './Reviews'
 import { CandidateCard, SACRED_GOLD, SacredBadge, SpotMenu } from './Sacred'
 
 interface Props {
@@ -58,8 +59,13 @@ export function SpotDetail({ spot, onBack, onEdit, onDeleted }: Props) {
         <div className="detail-rating">
           {spot.rating ? (
             <>
-              <span className="detail-score">{spot.rating.toFixed(1)}</span>
+              <span className="detail-score">{formatRating(spot.rating)}</span>
               <Stars value={spot.rating} size={18} />
+              {!!spot.reviewCount && (
+                <span className="muted tabular">
+                  ({spot.reviewCount} {spot.reviewCount === 1 ? 'reseña' : 'reseñas'})
+                </span>
+              )}
             </>
           ) : (
             <span className="muted">Sin valorar todavía</span>
@@ -104,12 +110,21 @@ export function SpotDetail({ spot, onBack, onEdit, onDeleted }: Props) {
           </li>
         </ul>
 
-        {spot.notes && (
+        {(spot.notes || !!spot.tags?.length) && (
           <section className="detail-section">
-            <h3>Reseña</h3>
-            <p className="detail-notes">{spot.notes}</p>
+            <h3>El sitio</h3>
+            {spot.notes && <p className="detail-notes">{spot.notes}</p>}
+            {!!spot.tags?.length && (
+              <ul className="tag-list detail-tags" aria-label="Características">
+                {spot.tags.map((t) => (
+                  <li key={t}>{SPOT_TAGS[t] ?? t}</li>
+                ))}
+              </ul>
+            )}
           </section>
         )}
+
+        <Reviews spot={spot} />
 
         {media.length > 0 && (
           <section className="detail-section">

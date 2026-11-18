@@ -1,10 +1,9 @@
 import type { ReactNode } from 'react'
 import { SHELL_COLORS, type Spot } from '../../lib/db'
 import { formatDistance } from '../../lib/geo'
-import { requestLocation, useMyLocation } from '../../lib/location'
 import { useErmita } from '../../lib/store'
 import { Crab, Shell } from '../Art'
-import { Icon, Stars } from '../ui'
+import { formatRating, Icon, Stars } from '../ui'
 import { SacredBadge } from '../Sacred'
 
 /** Página a pantalla completa de una sección (por encima del mapa). */
@@ -36,7 +35,7 @@ export function SpotCard({ spot, distance, onOpen, big = false }: { spot: Spot; 
         <p className="spot-card-meta">
           {spot.rating ? (
             <span className="spot-card-rating">
-              <span className="tabular">{spot.rating.toFixed(1)}</span> <Stars value={spot.rating} size={14} />
+              <span className="tabular">{formatRating(spot.rating)}</span> <Stars value={spot.rating} size={14} />
             </span>
           ) : (
             <span className="muted">Sin valorar</span>
@@ -55,38 +54,6 @@ export function SpotCard({ spot, distance, onOpen, big = false }: { spot: Spot; 
         </a>
       </div>
     </article>
-  )
-}
-
-/** Pide la ubicación y muestra qué pasa si no se puede. Renderiza `children` cuando la hay. */
-export function LocationGate({ why, children }: { why: string; children: ReactNode }) {
-  const loc = useMyLocation()
-  if (loc.status === 'ok') return <>{children}</>
-  return (
-    <div className="section-empty">
-      <Crab color="#3FBFAE" size={72} className={loc.status === 'asking' ? 'crab-walk' : undefined} />
-      {loc.status === 'denied' ? (
-        <>
-          <h2>No hay permiso para ver tu ubicación</h2>
-          <p>Actívalo en los ajustes del navegador para este sitio y vuelve a probar.</p>
-        </>
-      ) : loc.status === 'unavailable' ? (
-        <>
-          <h2>No se pudo saber dónde estás</h2>
-          <p>Comprueba que la ubicación del dispositivo está encendida y vuelve a probar.</p>
-        </>
-      ) : (
-        <>
-          <h2>{loc.status === 'asking' ? 'Buscando dónde estás…' : 'Hace falta tu ubicación'}</h2>
-          <p>{why}</p>
-        </>
-      )}
-      {loc.status !== 'asking' && (
-        <button type="button" className="btn btn-primary" onClick={requestLocation}>
-          <Icon.Locate size={18} /> Usar mi ubicación
-        </button>
-      )}
-    </div>
   )
 }
 

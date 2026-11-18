@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { SHELL_COLORS, type Spot } from '../lib/db'
 import { useErmita } from '../lib/store'
 import { Crab, Shell } from './Art'
-import { Icon, Stars } from './ui'
+import { formatRating, Icon, Stars } from './ui'
 import { SacredBadge } from './Sacred'
 
 interface Props {
@@ -78,7 +78,7 @@ function SpotRow({ spot, onClick }: { spot: Spot; onClick: () => void }) {
         <span className="spot-row-rating">
           {spot.rating ? (
             <>
-              <span className="tabular">{spot.rating.toFixed(1)}</span> <Stars value={spot.rating} size={13} />
+              <span className="tabular">{formatRating(spot.rating)}</span> <Stars value={spot.rating} size={13} />
             </>
           ) : (
             <span className="muted">Sin valorar</span>

@@ -3,13 +3,15 @@ import { Crab } from './Art'
 import { Icon } from './ui'
 import { signOut, usernameOf, useSession } from '../lib/auth'
 
-export type SectionId = 'conchas' | 'cercanas' | 'aleatoria' | 'del-dia'
+export type SectionId = 'conchas' | 'explorar' | 'aleatoria' | 'del-dia' | 'retos' | 'ranking'
 
 export const SECTIONS: { id: SectionId; name: string; desc: string; color: string }[] = [
   { id: 'conchas', name: 'Conchas para ermitaños', desc: 'El mapa de spots de la ermita', color: '#FF6A2B' },
-  { id: 'cercanas', name: 'Conchas más cercanas', desc: 'Las mejores a la distancia que elijas', color: '#3FBFAE' },
-  { id: 'aleatoria', name: 'Concha aleatoria', desc: 'Una concha al azar de tu ciudad', color: '#F2B44C' },
+  { id: 'explorar', name: 'Explorar conchas', desc: 'Filtra por zona, valoración y características', color: '#3FBFAE' },
+  { id: 'aleatoria', name: 'Concha aleatoria', desc: 'Una concha al azar de la zona que elijas', color: '#F2B44C' },
   { id: 'del-dia', name: 'Concha del día', desc: 'Tu misión de hoy, por orden del CHEF', color: '#E5432F' },
+  { id: 'retos', name: 'Retos diarios', desc: 'Dos conchas al día para ganar puntos', color: '#FF8E9E' },
+  { id: 'ranking', name: 'Ranking de cookeadores', desc: 'Quién va en cabeza y se lleva el descuento', color: '#F5C542' },
 ]
 
 interface Props {

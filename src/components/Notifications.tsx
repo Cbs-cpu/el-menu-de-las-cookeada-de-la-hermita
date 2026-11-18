@@ -5,6 +5,7 @@ import { isAdminSession, useSession } from '../lib/auth'
 import { deleteNotification, markNotificationsRead, resolveSacred, useErmita } from '../lib/store'
 import { Crab } from './Art'
 import { Icon } from './ui'
+import { ChallengeReview } from './ChallengeReview'
 
 export function NotificationsButton({ onOpen }: { onOpen: () => void }) {
   const { notifications } = useErmita()
@@ -41,7 +42,7 @@ const ago = (t: number) => {
 }
 
 export function NotificationsPanel({ onClose, onOpenSpot }: { onClose: () => void; onOpenSpot: (s: Spot) => void }) {
-  const { notifications, spots, requests, votes } = useErmita()
+  const { notifications, spots, requests, votes, challenges } = useErmita()
   const admin = isAdminSession(useSession())
 
   // Al abrir el panel, lo que se ve cuenta como leído
@@ -50,13 +51,31 @@ export function NotificationsPanel({ onClose, onOpenSpot }: { onClose: () => voi
     return () => clearTimeout(t)
   }, [notifications])
 
-  const reviews = notifications.filter((n) => n.kind === 'sacred_review')
-  const rest = notifications.filter((n) => n.kind !== 'sacred_review')
+  const isReview = (n: AppNotification) => n.kind === 'sacred_review' || n.kind === 'challenge_review'
+  const reviews = notifications.filter(isReview)
+  const rest = notifications.filter((n) => !isReview(n))
 
   const item = (n: AppNotification) => {
     const spot = spots.find((s) => s.id === n.spotId)
     const request = requests.find((r) => r.id === n.requestId)
     const count = request ? votes.filter((v) => v.requestId === request.id).length : 0
+    const challenge = n.kind === 'challenge_review' ? challenges.find((c) => c.id === n.challengeId && c.status === 'submitted') : undefined
+    if (admin && challenge)
+      return (
+        <li key={n.id} className={`notif is-${n.kind} ${n.read ? '' : 'is-unread'}`}>
+          <div className="notif-head">
+            <strong>{n.title}</strong>
+            <span className="notif-time">{ago(n.createdAt)}</span>
+          </div>
+          <ChallengeReview
+            challenge={challenge}
+            onOpenSpot={(id) => {
+              const s = spots.find((x) => x.id === id)
+              if (s) onOpenSpot(s)
+            }}
+          />
+        </li>
+      )
     return (
       <li key={n.id} className={`notif is-${n.kind} ${n.read ? '' : 'is-unread'}`}>
         <div className="notif-head">
@@ -103,7 +122,7 @@ export function NotificationsPanel({ onClose, onOpenSpot }: { onClose: () => voi
               </button>
             </>
           )}
-          {n.kind !== 'sacred_review' && (
+          {!isReview(n) && (
             <button type="button" className="icon-btn notif-delete" aria-label="Borrar notificación" onClick={() => deleteNotification(n.id)}>
               <Icon.Close size={16} />
             </button>
