@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { useLiveQuery } from 'dexie-react-hooks'
-import { db, SHELL_COLORS, uid, type Media, type ShellColor, type Spot } from '../lib/db'
+import { SHELL_COLORS, uid, type ShellColor, type Spot } from '../lib/db'
+import { MAX_UPLOAD_MB, mediaFor, saveSpot, useHermita } from '../lib/store'
 import { formatCoords } from '../lib/geo'
 import { Shell } from './Art'
 import { Icon, StarInput, useObjectUrl } from './ui'
@@ -18,7 +18,6 @@ interface Pending {
   kind: 'image' | 'video'
 }
 
-const MAX_MB = 200
 
 export function SpotForm({ spot, draft, onCancel, onSaved }: Props) {
   const [name, setName] = useState(spot?.name ?? draft.name ?? '')
@@ -33,7 +32,8 @@ export function SpotForm({ spot, draft, onCancel, onSaved }: Props) {
   const fileInput = useRef<HTMLInputElement>(null)
   const nameInput = useRef<HTMLInputElement>(null)
 
-  const existing = useLiveQuery(() => (spot ? db.media.where('spotId').equals(spot.id).sortBy('createdAt') : []), [spot?.id]) ?? []
+  const { media: allMedia } = useHermita()
+  const existing = spot ? mediaFor(allMedia, spot.id) : []
   const kept = existing.filter((m) => !removed.has(m.id))
 
   useEffect(() => {
@@ -45,14 +45,14 @@ export function SpotForm({ spot, draft, onCancel, onSaved }: Props) {
     let skipped = 0
     for (const file of Array.from(files)) {
       const kind = file.type.startsWith('video/') ? 'video' : file.type.startsWith('image/') ? 'image' : null
-      if (!kind || file.size > MAX_MB * 1024 * 1024) {
+      if (!kind || file.size > MAX_UPLOAD_MB * 1024 * 1024) {
         skipped++
         continue
       }
       next.push({ key: uid(), file, kind })
     }
     setPending((p) => [...p, ...next])
-    setError(skipped ? `${skipped} archivo${skipped > 1 ? 's' : ''} no se añadió: solo fotos o vídeos de hasta ${MAX_MB} MB.` : undefined)
+    setError(skipped ? `${skipped} archivo${skipped > 1 ? 's' : ''} no se añadió: solo fotos o vídeos de hasta ${MAX_UPLOAD_MB} MB.` : undefined)
   }
 
   async function submit(e?: FormEvent) {
@@ -77,16 +77,12 @@ export function SpotForm({ spot, draft, onCancel, onSaved }: Props) {
       createdAt: spot?.createdAt ?? now,
       updatedAt: now,
     }
-    const media: Media[] = pending.map((p, i) => ({ id: uid(), spotId: id, blob: p.file, kind: p.kind, name: p.file.name, createdAt: now + i }))
     try {
-      await db.transaction('rw', db.spots, db.media, async () => {
-        await db.spots.put(record)
-        if (removed.size) await db.media.bulkDelete([...removed])
-        if (media.length) await db.media.bulkAdd(media)
-      })
+      await saveSpot(record, pending, existing.filter((m) => removed.has(m.id)))
       onSaved(id, !spot)
-    } catch {
-      setError('No se pudo guardar. Puede que el navegador se haya quedado sin espacio.')
+    } catch (err) {
+      console.error(err)
+      setError('No se pudo guardar. Revisa la conexión y vuelve a probar.')
       setSaving(false)
     }
   }
@@ -147,7 +143,7 @@ export function SpotForm({ spot, draft, onCancel, onSaved }: Props) {
           >
             <div className="thumbs">
               {kept.map((m) => (
-                <Thumb key={m.id} blob={m.blob} kind={m.kind} onRemove={() => setRemoved((r) => new Set(r).add(m.id))} />
+                <Thumb key={m.id} src={m.url} kind={m.kind} onRemove={() => setRemoved((r) => new Set(r).add(m.id))} />
               ))}
               {pending.map((p) => (
                 <Thumb key={p.key} blob={p.file} kind={p.kind} onRemove={() => setPending((list) => list.filter((x) => x.key !== p.key))} />
@@ -195,15 +191,16 @@ export function SpotForm({ spot, draft, onCancel, onSaved }: Props) {
           Cancelar
         </button>
         <button type="submit" className="btn btn-primary" disabled={saving}>
-          {saving ? 'Guardando…' : spot ? 'Guardar cambios' : 'Guardar concha'}
+          {saving ? (pending.length ? 'Subiendo…' : 'Guardando…') : spot ? 'Guardar cambios' : 'Guardar concha'}
         </button>
       </footer>
     </form>
   )
 }
 
-function Thumb({ blob, kind, onRemove }: { blob: Blob; kind: 'image' | 'video'; onRemove: () => void }) {
-  const url = useObjectUrl(blob)
+function Thumb({ blob, src, kind, onRemove }: { blob?: Blob; src?: string; kind: 'image' | 'video'; onRemove: () => void }) {
+  const local = useObjectUrl(blob)
+  const url = src ?? local
   return (
     <div className="thumb">
       {url && (kind === 'image' ? <img src={url} alt="" /> : <video src={url} muted playsInline preload="metadata" />)}

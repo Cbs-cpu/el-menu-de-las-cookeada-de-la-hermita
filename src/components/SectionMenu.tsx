@@ -52,7 +52,7 @@ export function SectionMenu({ open, onClose, count }: { open: boolean; onClose: 
             </span>
           </li>
         </ul>
-        <p className="menu-foot muted">Tus spots, fotos y vídeos se guardan en este navegador.</p>
+        <p className="menu-foot muted">Las conchas, fotos y vídeos se comparten con toda la hermita.</p>
       </nav>
     </div>
   )

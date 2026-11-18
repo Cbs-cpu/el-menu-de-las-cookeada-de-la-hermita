@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useLiveQuery } from 'dexie-react-hooks'
 import { Toaster, toast } from 'sonner'
-import { db, type Spot } from './lib/db'
+import { type Spot } from './lib/db'
+import { useHermita } from './lib/store'
 import { formatCoords, reverseGeocode } from './lib/geo'
 import { MapView, type MapHandle, type MapMode } from './components/MapView'
 import { SearchBar } from './components/SearchBar'
@@ -16,7 +16,7 @@ type View = { kind: 'none' } | { kind: 'list' } | { kind: 'detail'; id: string }
 type Draft = { lat: number; lng: number; name?: string; address?: string }
 
 export default function App() {
-  const spots = useLiveQuery(() => db.spots.toArray(), []) ?? []
+  const { spots, status } = useHermita()
   const [view, setView] = useState<View>({ kind: 'none' })
   const [draft, setDraft] = useState<Draft | null>(null)
   const [mode, setMode] = useState<MapMode>('mapa')
@@ -131,8 +131,15 @@ export default function App() {
         />
         {!panelOpen && (
           <button type="button" className="chip" onClick={() => setView({ kind: 'list' })}>
-            <Icon.List size={16} /> Mis conchas <span className="chip-count tabular">{spots.length}</span>
+            <Icon.List size={16} /> Conchas <span className="chip-count tabular">{spots.length}</span>
           </button>
+        )}
+        {status !== 'ready' && (
+          <p className={`sync-note ${status === 'loading' ? '' : 'is-problem'}`} role="status">
+            {status === 'loading' && 'Cargando las conchas de la hermita…'}
+            {status === 'error' && 'No se pudieron cargar las conchas. Revisa la conexión y recarga la página.'}
+            {status === 'unconfigured' && 'Falta conectar la base de datos: añade VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY.'}
+          </p>
         )}
       </div>
 

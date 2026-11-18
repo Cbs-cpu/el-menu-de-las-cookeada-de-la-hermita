@@ -13,7 +13,8 @@ export interface Spot {
   updatedAt: number
 }
 
-export interface Media {
+/** Archivo guardado en el navegador (versión antigua, solo para migrar). */
+export interface LocalMedia {
   id: string
   spotId: string
   blob: Blob
@@ -33,9 +34,10 @@ export const SHELL_COLORS = {
 
 export type ShellColor = keyof typeof SHELL_COLORS
 
+/** Base de datos local antigua: solo se usa para subir a Supabase las conchas creadas antes. */
 export const db = new Dexie('hermita') as Dexie & {
   spots: EntityTable<Spot, 'id'>
-  media: EntityTable<Media, 'id'>
+  media: EntityTable<LocalMedia, 'id'>
 }
 
 db.version(1).stores({
@@ -44,3 +46,14 @@ db.version(1).stores({
 })
 
 export const uid = () => crypto.randomUUID()
+
+/** Foto o vídeo guardado en Supabase Storage. */
+export interface Media {
+  id: string
+  spotId: string
+  path: string
+  url: string
+  kind: 'image' | 'video'
+  name: string
+  createdAt: number
+}

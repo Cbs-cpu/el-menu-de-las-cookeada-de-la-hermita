@@ -1531,3 +1531,19 @@ p {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ───────── Estado de sincronización ───────── */
+.sync-note {
+  max-width: 100%;
+  padding: 8px 14px;
+  border-radius: var(--r-md);
+  background: var(--rock);
+  box-shadow: var(--shadow-float);
+  font-size: 14px;
+  color: var(--muted);
+  animation: rise-in 220ms var(--ease-out);
+}
+.sync-note.is-problem {
+  color: var(--text);
+  box-shadow: var(--shadow-float), inset 3px 0 0 var(--danger);
+}

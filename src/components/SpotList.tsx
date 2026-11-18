@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react'
-import { useLiveQuery } from 'dexie-react-hooks'
-import { db, SHELL_COLORS, type Spot } from '../lib/db'
+import { SHELL_COLORS, type Spot } from '../lib/db'
+import { useHermita } from '../lib/store'
 import { Crab, Shell } from './Art'
-import { Icon, Stars, useObjectUrl } from './ui'
+import { Icon, Stars } from './ui'
 
 interface Props {
   spots: Spot[]
@@ -24,7 +24,7 @@ export function SpotList({ spots, onPick, onClose, onNew }: Props) {
     <div className="panel-body">
       <header className="panel-head">
         <h2>
-          Mis conchas <span className="muted tabular">{spots.length}</span>
+          Conchas de la hermita <span className="muted tabular">{spots.length}</span>
         </h2>
         <button type="button" className="icon-btn" onClick={onClose} aria-label="Cerrar lista">
           <Icon.Close size={20} />
@@ -66,8 +66,8 @@ export function SpotList({ spots, onPick, onClose, onNew }: Props) {
 }
 
 function SpotRow({ spot, onClick }: { spot: Spot; onClick: () => void }) {
-  const cover = useLiveQuery(() => db.media.where('spotId').equals(spot.id).filter((m) => m.kind === 'image').first(), [spot.id])
-  const url = useObjectUrl(cover?.blob)
+  const { media } = useHermita()
+  const url = media.find((m) => m.spotId === spot.id && m.kind === 'image')?.url
   const color = SHELL_COLORS[spot.shell].hex
   return (
     <button type="button" className="spot-row" onClick={onClick}>

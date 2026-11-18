@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
-import { useLiveQuery } from 'dexie-react-hooks'
 import { toast } from 'sonner'
-import { db, SHELL_COLORS, type Media, type Spot } from '../lib/db'
+import { SHELL_COLORS, type Media, type Spot } from '../lib/db'
+import { deleteSpot, mediaFor, useHermita } from '../lib/store'
 import { formatCoords } from '../lib/geo'
 import { Crab } from './Art'
-import { Icon, Stars, useObjectUrl } from './ui'
+import { Icon, Stars } from './ui'
 
 interface Props {
   spot: Spot
@@ -14,7 +14,7 @@ interface Props {
 }
 
 export function SpotDetail({ spot, onBack, onEdit, onDeleted }: Props) {
-  const media = useLiveQuery(() => db.media.where('spotId').equals(spot.id).sortBy('createdAt'), [spot.id]) ?? []
+  const media = mediaFor(useHermita().media, spot.id)
   const [viewer, setViewer] = useState<number | null>(null)
   const [confirming, setConfirming] = useState(false)
   const color = SHELL_COLORS[spot.shell].hex
@@ -28,10 +28,13 @@ export function SpotDetail({ spot, onBack, onEdit, onDeleted }: Props) {
 
   async function remove() {
     if (!confirming) return setConfirming(true)
-    await db.transaction('rw', db.spots, db.media, async () => {
-      await db.media.where('spotId').equals(spot.id).delete()
-      await db.spots.delete(spot.id)
-    })
+    try {
+      await deleteSpot(spot)
+    } catch (err) {
+      console.error(err)
+      toast('No se pudo eliminar. Revisa la conexión y vuelve a probar.')
+      return
+    }
     toast('Concha eliminada')
     onDeleted()
   }
@@ -125,7 +128,7 @@ export function SpotDetail({ spot, onBack, onEdit, onDeleted }: Props) {
 }
 
 function HeroMedia({ media, onOpen }: { media: Media; onOpen: () => void }) {
-  const url = useObjectUrl(media.blob)
+  const url = media.url
   return (
     <button type="button" className="detail-hero-media" onClick={onOpen} aria-label="Ver a pantalla completa">
       {url && (media.kind === 'image' ? <img src={url} alt="" /> : <video src={url} muted playsInline preload="metadata" />)}
@@ -134,7 +137,7 @@ function HeroMedia({ media, onOpen }: { media: Media; onOpen: () => void }) {
 }
 
 function GalleryItem({ media, onOpen }: { media: Media; onOpen: () => void }) {
-  const url = useObjectUrl(media.blob)
+  const url = media.url
   return (
     <button type="button" className="gallery-item" onClick={onOpen} aria-label={media.kind === 'video' ? 'Ver vídeo' : 'Ver foto'}>
       {url && (media.kind === 'image' ? <img src={url} alt="" loading="lazy" /> : <video src={url} muted playsInline preload="metadata" />)}
@@ -149,7 +152,7 @@ function GalleryItem({ media, onOpen }: { media: Media; onOpen: () => void }) {
 
 function Lightbox({ media, index, onIndex, onClose }: { media: Media[]; index: number; onIndex: (i: number) => void; onClose: () => void }) {
   const m = media[index]
-  const url = useObjectUrl(m.blob)
+  const url = m.url
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose()
