@@ -1,10 +1,12 @@
 import { useEffect, useRef } from 'react'
 import { Crab } from './Art'
 import { Icon } from './ui'
+import { signOut, usernameOf, useSession } from '../lib/auth'
 
 const SECTIONS = [{ id: 'conchas', name: 'Conchas para hermitaños', desc: 'El mapa de spots de la hermita', color: '#FF6A2B', ready: true }]
 
 export function SectionMenu({ open, onClose, count }: { open: boolean; onClose: () => void; count: number }) {
+  const session = useSession()
   const closeBtn = useRef<HTMLButtonElement>(null)
   useEffect(() => {
     if (!open) return
@@ -52,7 +54,15 @@ export function SectionMenu({ open, onClose, count }: { open: boolean; onClose: 
             </span>
           </li>
         </ul>
-        <p className="menu-foot muted">Las conchas, fotos y vídeos se comparten con toda la hermita.</p>
+        <div className="menu-user">
+          <span>
+            <small>Has entrado como</small>
+            <strong>{usernameOf(session)}</strong>
+          </span>
+          <button type="button" className="btn btn-ghost" onClick={signOut}>
+            Cerrar sesión
+          </button>
+        </div>
       </nav>
     </div>
   )

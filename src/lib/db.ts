@@ -9,6 +9,7 @@ export interface Spot {
   notes: string
   address?: string
   shell: ShellColor
+  author?: string // nombre de usuario de quien la puso
   createdAt: number
   updatedAt: number
 }

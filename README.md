@@ -14,7 +14,19 @@ Un mapa del mundo real en modo oscuro donde guardar **spots** (aquí los llamamo
 - Lista de conchas ordenable por recientes o mejor valoradas.
 - Funciona en móvil (hoja inferior) y escritorio (panel lateral).
 
-Por ahora todo se guarda en el navegador (IndexedDB), fotos y vídeos incluidos.
+Las conchas, fotos y vídeos se guardan en Supabase y se ven al momento en todos los dispositivos.
+
+## Cuentas
+
+Para usar la app hay que entrar con usuario y contraseña. Para crear una cuenta hay que pasar
+**la prueba del mago**: preguntas de "¿Es pensaukas?" con Sí/No. Las preguntas están en
+`src/lib/wizard.ts`.
+
+## Supabase
+
+1. SQL Editor: ejecutar `supabase/schema.sql` y después `supabase/auth.sql`.
+2. Authentication → Sign In / Providers → Email: desactivar **Confirm email**
+   (las cuentas usan emails internos `usuario@hermita.app`).
 
 ## Desarrollo
 

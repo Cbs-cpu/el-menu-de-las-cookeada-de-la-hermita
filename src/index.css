@@ -1547,3 +1547,259 @@ p {
   color: var(--text);
   box-shadow: var(--shadow-float), inset 3px 0 0 var(--danger);
 }
+
+/* ───────── Entrar / registrarse ───────── */
+.auth {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px var(--gutter) 120px;
+  overflow-y: auto;
+  background:
+    radial-gradient(70% 50% at 50% 0%, rgb(255 106 43 / 0.12), transparent 70%),
+    radial-gradient(60% 40% at 50% 100%, rgb(63 191 174 / 0.08), transparent 70%),
+    var(--ink);
+}
+.auth-beach {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 80px;
+  border-top: 2px dashed rgb(242 180 76 / 0.18);
+  pointer-events: none;
+}
+.auth-beach .crab-walk {
+  position: absolute;
+  bottom: 18px;
+  left: 18%;
+}
+.auth-beach .crab-walk-slow {
+  left: 55%;
+  animation-duration: 7s;
+  animation-delay: -2s;
+}
+.auth-beach .crab-walk-late {
+  left: 80%;
+  animation-duration: 8s;
+  animation-delay: -5s;
+}
+
+.auth-card {
+  position: relative;
+  width: min(420px, 100%);
+  padding: 28px 24px 24px;
+  background: var(--rock);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-float);
+  animation: pop-in 300ms var(--ease-out);
+}
+.auth-crabs {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+}
+.auth-title {
+  margin: 14px 0 22px;
+  font-size: clamp(30px, 8vw, 38px);
+  line-height: 1;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  color: var(--cream);
+}
+.auth-tabs {
+  margin: 0 0 20px;
+}
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.auth-submit {
+  height: 50px;
+  margin-top: 4px;
+  font-size: 16px;
+}
+.auth-hint {
+  font-size: 14px;
+  color: var(--muted);
+  text-align: center;
+}
+
+/* La prueba del mago */
+.wizard {
+  text-align: center;
+}
+.wizard-head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.wizard-crab {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 40px;
+}
+.wizard-hat {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  translate: -50% -6px;
+  rotate: -8deg;
+  transition: rotate 300ms var(--ease-out), translate 300ms var(--ease-out);
+}
+.wizard-crab.is-failed .wizard-hat {
+  rotate: 14deg;
+  translate: -40% -10px;
+}
+.wizard-crab.is-failed .crab-claw-l,
+.wizard-crab.is-failed .crab-claw-r {
+  animation: snap 380ms var(--ease-out) 2;
+}
+.wizard-crab.is-passed {
+  animation: hop 520ms var(--ease-out);
+}
+.wizard-title {
+  margin-top: 8px;
+  font-size: 22px;
+  color: var(--cream);
+}
+
+.wizard-progress {
+  height: 6px;
+  margin: 20px 0 8px;
+  border-radius: var(--r-pill);
+  background: var(--ink);
+  overflow: hidden;
+}
+.wizard-progress-bar {
+  display: block;
+  height: 100%;
+  background: #9c86ff;
+  transform-origin: left;
+  transition: transform 260ms var(--ease-out);
+}
+.wizard-count {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.wizard-question {
+  margin: 18px 0 22px;
+  animation: rise-in 240ms var(--ease-out);
+}
+.wizard-prompt {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.wizard-word {
+  margin-top: 10px;
+  padding: 22px 16px;
+  border-radius: var(--r-md);
+  background: var(--ink);
+  font-size: clamp(28px, 8vw, 36px);
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+.wizard-answers {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.wizard-btn {
+  height: 64px;
+  border-radius: var(--r-md);
+  font-size: 22px;
+  font-weight: 800;
+  transition: transform 140ms var(--ease-out), background-color 160ms ease;
+}
+.wizard-btn:active {
+  transform: scale(0.96);
+}
+.wizard-yes {
+  background: var(--teal);
+  color: #04201c;
+}
+.wizard-no {
+  background: var(--orange);
+  color: #1c0a02;
+}
+@media (hover: hover) {
+  .wizard-yes:hover {
+    background: #52cfbe;
+  }
+  .wizard-no:hover {
+    background: #ff7a40;
+  }
+}
+.wizard-back {
+  margin-top: 14px;
+  width: 100%;
+}
+
+.wizard-end {
+  margin-top: 16px;
+  animation: rise-in 240ms var(--ease-out);
+}
+.wizard-end h2 {
+  font-size: 26px;
+  color: var(--cream);
+}
+.wizard-end p {
+  margin: 8px auto 20px;
+  max-width: 32ch;
+  color: var(--muted);
+}
+.wizard-end-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.splash {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: var(--ink);
+}
+
+/* Usuario en el menú */
+.menu-user {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: auto;
+  padding: 14px 12px 4px;
+  border-top: 1px solid var(--line);
+}
+.menu-user span {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.menu-user small {
+  color: var(--muted);
+  font-size: 13px;
+}
+.menu-user strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@keyframes hop {
+  40% {
+    transform: translateY(-14px);
+  }
+}

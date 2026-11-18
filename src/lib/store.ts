@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react'
-import { createClient } from '@supabase/supabase-js'
+import { supabase } from './supabase'
+import { currentUsername } from './auth'
 import { db, uid, type Media, type ShellColor, type Spot } from './db'
 
 /*
@@ -9,14 +10,7 @@ import { db, uid, type Media, type ShellColor, type Spot } from './db'
  * - Realtime: cualquier cambio de otro dispositivo se refleja al momento.
  */
 
-// Proyecto de Supabase de la hermita. La clave "publishable" es pública por diseño
-// (va dentro de la web); lo que protege los datos son las políticas de supabase/schema.sql.
-// Se pueden sobrescribir con VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY.
-const URL_ = import.meta.env.VITE_SUPABASE_URL || 'https://wpkeqearxhbwilutnzxx.supabase.co'
-const KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_bx9wDK7LWrt9OyDfHDyx1A_HRjiJVGW'
-
-export const isConfigured = Boolean(URL_ && KEY)
-const supabase = isConfigured ? createClient(URL_!, KEY!) : null
+export const isConfigured = true
 
 const BUCKET = 'media'
 export const MAX_UPLOAD_MB = 50
@@ -30,6 +24,7 @@ interface SpotRow {
   notes: string
   address: string | null
   shell: string
+  author: string | null
   created_at: string
   updated_at: string
 }
@@ -52,6 +47,7 @@ const toSpot = (r: SpotRow): Spot => ({
   notes: r.notes,
   address: r.address ?? undefined,
   shell: r.shell as ShellColor,
+  author: r.author ?? undefined,
   createdAt: Date.parse(r.created_at),
   updatedAt: Date.parse(r.updated_at),
 })
@@ -65,6 +61,7 @@ const toRow = (s: Spot): SpotRow => ({
   notes: s.notes,
   address: s.address ?? null,
   shell: s.shell,
+  author: s.author ?? null,
   created_at: new Date(s.createdAt).toISOString(),
   updated_at: new Date(s.updatedAt).toISOString(),
 })
@@ -125,17 +122,30 @@ function scheduleRefresh() {
   refreshTimer = setTimeout(refresh, 150)
 }
 
+let visibilityHooked = false
+let channel: ReturnType<NonNullable<typeof supabase>['channel']> | null = null
+
 function start() {
   if (started || !supabase) return
   started = true
   refresh().then(migrateLocal)
-  supabase
+  channel = supabase
     .channel('hermita')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'spots' }, scheduleRefresh)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'media' }, scheduleRefresh)
     .subscribe()
   // Al volver a la pestaña (p. ej. el móvil se despierta), ponerse al día.
+  if (visibilityHooked) return
+  visibilityHooked = true
   document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && scheduleRefresh())
+}
+
+/** Al cerrar sesión: olvidar los datos y dejar de escuchar cambios. */
+export function resetStore() {
+  if (channel) supabase.removeChannel(channel)
+  channel = null
+  started = false
+  set({ status: 'loading', spots: [], media: [] })
 }
 
 function subscribe(cb: () => void) {
@@ -177,7 +187,7 @@ async function uploadMedia(spotId: string, files: { blob: Blob; name: string; ki
 
 export async function saveSpot(spot: Spot, newFiles: { file: File; kind: 'image' | 'video' }[], removed: Media[]) {
   if (!supabase) throw new Error('Supabase sin configurar')
-  const { error } = await supabase.from('spots').upsert(toRow(spot))
+  const { error } = await supabase.from('spots').upsert(toRow({ ...spot, author: spot.author ?? currentUsername() }))
   if (error) throw error
   if (removed.length) {
     await supabase.from('media').delete().in('id', removed.map((m) => m.id))

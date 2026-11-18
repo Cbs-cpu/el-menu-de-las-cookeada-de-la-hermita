@@ -118,7 +118,7 @@ export function SpotDetail({ spot, onBack, onEdit, onDeleted }: Props) {
         )}
 
         <p className="detail-stamp muted">
-          Guardada el {new Date(spot.createdAt).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
+          {spot.author ? `Puesta por ${spot.author} el ` : 'Guardada el '}{new Date(spot.createdAt).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
         </p>
       </div>
 

@@ -74,6 +74,7 @@ export function SpotForm({ spot, draft, onCancel, onSaved }: Props) {
       lat: draft.lat,
       lng: draft.lng,
       address: draft.address ?? spot?.address,
+      author: spot?.author,
       createdAt: spot?.createdAt ?? now,
       updatedAt: now,
     }
