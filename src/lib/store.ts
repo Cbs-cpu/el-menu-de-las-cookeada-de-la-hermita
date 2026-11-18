@@ -9,8 +9,11 @@ import { db, uid, type Media, type ShellColor, type Spot } from './db'
  * - Realtime: cualquier cambio de otro dispositivo se refleja al momento.
  */
 
-const URL_ = import.meta.env.VITE_SUPABASE_URL as string | undefined
-const KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined
+// Proyecto de Supabase de la hermita. La clave "publishable" es pública por diseño
+// (va dentro de la web); lo que protege los datos son las políticas de supabase/schema.sql.
+// Se pueden sobrescribir con VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY.
+const URL_ = import.meta.env.VITE_SUPABASE_URL || 'https://wpkeqearxhbwilutnzxx.supabase.co'
+const KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_bx9wDK7LWrt9OyDfHDyx1A_HRjiJVGW'
 
 export const isConfigured = Boolean(URL_ && KEY)
 const supabase = isConfigured ? createClient(URL_!, KEY!) : null
@@ -80,7 +83,7 @@ const toMedia = (r: MediaRow): Media => ({
 
 // ───────── Store en memoria compartido por toda la app ─────────
 
-export type Status = 'loading' | 'ready' | 'error' | 'unconfigured'
+export type Status = 'loading' | 'ready' | 'error' | 'unconfigured' | 'no-schema'
 
 interface State {
   status: Status
@@ -106,8 +109,11 @@ async function refresh() {
     supabase.from('media').select('*').order('created_at', { ascending: true }),
   ])
   if (spots.error || media.error) {
-    console.error(spots.error ?? media.error)
-    if (state.status === 'loading') set({ status: 'error' })
+    const err = spots.error ?? media.error
+    console.error(err)
+    // PGRST205 / 42P01: la tabla no existe → falta ejecutar supabase/schema.sql
+    const missing = err?.code === 'PGRST205' || err?.code === '42P01'
+    if (state.status === 'loading' || missing) set({ status: missing ? 'no-schema' : 'error' })
     return
   }
   set({ status: 'ready', spots: (spots.data as SpotRow[]).map(toSpot), media: (media.data as MediaRow[]).map(toMedia) })

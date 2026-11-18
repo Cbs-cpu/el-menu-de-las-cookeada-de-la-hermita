@@ -138,6 +138,7 @@ export default function App() {
           <p className={`sync-note ${status === 'loading' ? '' : 'is-problem'}`} role="status">
             {status === 'loading' && 'Cargando las conchas de la hermita…'}
             {status === 'error' && 'No se pudieron cargar las conchas. Revisa la conexión y recarga la página.'}
+            {status === 'no-schema' && 'La base de datos está vacía: ejecuta supabase/schema.sql en el SQL Editor de Supabase.'}
             {status === 'unconfigured' && 'Falta conectar la base de datos: añade VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY.'}
           </p>
         )}
