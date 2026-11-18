@@ -5,6 +5,7 @@ import { deleteSpot, mediaFor, useErmita } from '../lib/store'
 import { formatCoords } from '../lib/geo'
 import { Crab } from './Art'
 import { Icon, Stars } from './ui'
+import { CandidateCard, SACRED_GOLD, SacredBadge, SpotMenu } from './Sacred'
 
 interface Props {
   spot: Spot
@@ -43,14 +44,16 @@ export function SpotDetail({ spot, onBack, onEdit, onDeleted }: Props) {
 
   return (
     <div className="panel-body detail">
-      <div className="detail-hero" style={{ '--shell': color } as React.CSSProperties}>
+      <div className={`detail-hero ${spot.sacred ? 'is-sacred' : ''}`} style={{ '--shell': spot.sacred ? SACRED_GOLD : color } as React.CSSProperties}>
         {hero ? <HeroMedia media={hero} onOpen={() => setViewer(media.indexOf(hero))} /> : <Crab color={color} size={120} className="detail-hero-crab" />}
         <button type="button" className="icon-btn icon-btn-float" onClick={onBack} aria-label="Volver a la lista">
           <Icon.Back size={20} />
         </button>
+        <SpotMenu spot={spot} />
       </div>
 
       <div className="detail-scroll">
+        {spot.sacred && <SacredBadge />}
         <h2 className="detail-title">{spot.name}</h2>
         <div className="detail-rating">
           {spot.rating ? (
@@ -88,6 +91,8 @@ export function SpotDetail({ spot, onBack, onEdit, onDeleted }: Props) {
             {confirming ? '¿Seguro?' : 'Eliminar'}
           </button>
         </div>
+
+        <CandidateCard spot={spot} />
 
         <ul className="detail-meta">
           <li>

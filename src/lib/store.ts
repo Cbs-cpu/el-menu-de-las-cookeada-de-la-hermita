@@ -1,8 +1,8 @@
 import { useSyncExternalStore } from 'react'
 import * as tus from 'tus-js-client'
 import { supabase, SUPABASE_KEY, SUPABASE_URL } from './supabase'
-import { currentUsername } from './auth'
-import { db, uid, type Media, type ShellColor, type Spot } from './db'
+import { currentUsername, isAdmin } from './auth'
+import { db, uid, type AppNotification, type Media, type NotificationKind, type SacredRequest, type SacredVote, type ShellColor, type Spot } from './db'
 
 /*
  * Datos globales de la ermita en Supabase.
@@ -25,6 +25,8 @@ interface SpotRow {
   address: string | null
   shell: string
   author: string | null
+  author_id?: string | null
+  sacred?: boolean
   created_at: string
   updated_at: string
 }
@@ -48,11 +50,15 @@ const toSpot = (r: SpotRow): Spot => ({
   address: r.address ?? undefined,
   shell: r.shell as ShellColor,
   author: r.author ?? undefined,
+  authorId: r.author_id ?? undefined,
+  sacred: r.sacred ?? false,
   createdAt: Date.parse(r.created_at),
   updatedAt: Date.parse(r.updated_at),
 })
 
-const toRow = (s: Spot): SpotRow => ({
+/** `withSacred`: solo los ermitaños envían el campo "sagrada" (la base de datos rechaza al resto). */
+const toRow = (s: Spot, withSacred = false): SpotRow => ({
+  ...(withSacred ? { sacred: !!s.sacred } : {}),
   id: s.id,
   name: s.name,
   lat: s.lat,
@@ -86,9 +92,13 @@ interface State {
   status: Status
   spots: Spot[]
   media: Media[]
+  requests: SacredRequest[] // peticiones abiertas de concha sagrada
+  votes: SacredVote[]
+  notifications: AppNotification[]
 }
 
-let state: State = { status: isConfigured ? 'loading' : 'unconfigured', spots: [], media: [] }
+const EMPTY = { spots: [], media: [], requests: [], votes: [], notifications: [] }
+let state: State = { status: isConfigured ? 'loading' : 'unconfigured', ...EMPTY }
 const listeners = new Set<() => void>()
 
 function set(patch: Partial<State>) {
@@ -113,7 +123,38 @@ async function refresh() {
     if (state.status === 'loading' || missing) set({ status: missing ? 'no-schema' : 'error' })
     return
   }
-  set({ status: 'ready', spots: (spots.data as SpotRow[]).map(toSpot), media: (media.data as MediaRow[]).map(toMedia) })
+  // Conchas sagradas y notificaciones: si aún no se ha ejecutado supabase/sacred.sql,
+  // la app sigue funcionando sin ellas.
+  const [requests, votes, notifications] = await Promise.all([
+    supabase.from('sacred_requests').select('id, spot_id, requested_by, requester, created_at').eq('status', 'pending'),
+    supabase.from('sacred_votes').select('request_id, user_id'),
+    supabase.from('notifications').select('*').order('created_at', { ascending: false }).limit(50),
+  ])
+  for (const r of [requests, votes, notifications]) if (r.error) console.warn('Conchas sagradas no disponibles:', r.error.message)
+
+  set({
+    status: 'ready',
+    spots: (spots.data as SpotRow[]).map(toSpot),
+    media: (media.data as MediaRow[]).map(toMedia),
+    requests: (requests.data ?? []).map((r) => ({
+      id: r.id,
+      spotId: r.spot_id,
+      requestedBy: r.requested_by,
+      requester: r.requester,
+      createdAt: Date.parse(r.created_at),
+    })),
+    votes: (votes.data ?? []).map((v) => ({ requestId: v.request_id, userId: v.user_id })),
+    notifications: (notifications.data ?? []).map((n) => ({
+      id: n.id,
+      kind: n.kind as NotificationKind,
+      title: n.title,
+      body: n.body,
+      spotId: n.spot_id ?? undefined,
+      requestId: n.request_id ?? undefined,
+      read: !!n.read_at,
+      createdAt: Date.parse(n.created_at),
+    })),
+  })
 }
 
 /** Agrupa varias notificaciones de realtime en una sola recarga. */
@@ -133,6 +174,9 @@ function start() {
     .channel('hermita')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'spots' }, scheduleRefresh)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'media' }, scheduleRefresh)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'sacred_requests' }, scheduleRefresh)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'sacred_votes' }, scheduleRefresh)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, scheduleRefresh)
     .subscribe()
   // Al volver a la pestaña (p. ej. el móvil se despierta), ponerse al día.
   if (visibilityHooked) return
@@ -145,7 +189,7 @@ export function resetStore() {
   if (channel) supabase.removeChannel(channel)
   channel = null
   started = false
-  set({ status: 'loading', spots: [], media: [] })
+  set({ status: 'loading', ...EMPTY })
 }
 
 function subscribe(cb: () => void) {
@@ -187,7 +231,7 @@ async function uploadMedia(spotId: string, files: { blob: Blob; name: string; ki
 
 /** Guarda los datos de la concha y borra los archivos quitados. Las fotos y vídeos nuevos se suben aparte. */
 export async function saveSpotRecord(spot: Spot, removed: Media[]) {
-  const { error } = await supabase.from('spots').upsert(toRow({ ...spot, author: spot.author ?? currentUsername() }))
+  const { error } = await supabase.from('spots').upsert(toRow({ ...spot, author: spot.author ?? currentUsername() }, isAdmin()))
   if (error) throw error
   if (removed.length) {
     await supabase.from('media').delete().in('id', removed.map((m) => m.id))
@@ -286,4 +330,56 @@ async function migrateLocal() {
   } finally {
     migrating = false
   }
+}
+
+// ───────── Conchas sagradas ─────────
+
+/** Mensaje legible a partir de un error de Supabase (los de las funciones SQL ya vienen en español). */
+const fail = (error: { message: string } | null) => {
+  if (error) throw new Error(error.message)
+}
+
+export async function requestSacred(spotId: string) {
+  fail((await supabase.rpc('request_sacred', { p_spot: spotId })).error)
+  await refresh()
+}
+
+export async function withdrawSacred(requestId: string) {
+  fail((await supabase.rpc('withdraw_sacred', { p_request: requestId })).error)
+  await refresh()
+}
+
+export async function resolveSacred(requestId: string, approve: boolean) {
+  fail((await supabase.rpc('resolve_sacred', { p_request: requestId, p_approve: approve })).error)
+  await refresh()
+}
+
+/** Los ermitaños marcan o quitan "sagrada" directamente. */
+export async function setSacred(spotId: string, sacred: boolean) {
+  fail((await supabase.from('spots').update({ sacred }).eq('id', spotId)).error)
+  await refresh()
+}
+
+export async function vote(requestId: string, on: boolean) {
+  const { data } = await supabase.auth.getSession()
+  const userId = data.session?.user.id
+  if (!userId) return
+  const res = on
+    ? await supabase.from('sacred_votes').insert({ request_id: requestId, user_id: userId })
+    : await supabase.from('sacred_votes').delete().eq('request_id', requestId).eq('user_id', userId)
+  fail(res.error)
+  await refresh()
+}
+
+// ───────── Notificaciones ─────────
+
+export async function markNotificationsRead(ids: string[]) {
+  if (!ids.length) return
+  set({ notifications: state.notifications.map((n) => (ids.includes(n.id) ? { ...n, read: true } : n)) })
+  await supabase.from('notifications').update({ read_at: new Date().toISOString() }).in('id', ids)
+}
+
+export async function deleteNotification(id: string) {
+  set({ notifications: state.notifications.filter((n) => n.id !== id) })
+  await supabase.from('notifications').delete().eq('id', id)
 }

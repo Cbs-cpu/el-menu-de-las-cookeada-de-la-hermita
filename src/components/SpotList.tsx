@@ -3,6 +3,7 @@ import { SHELL_COLORS, type Spot } from '../lib/db'
 import { useErmita } from '../lib/store'
 import { Crab, Shell } from './Art'
 import { Icon, Stars } from './ui'
+import { SacredBadge } from './Sacred'
 
 interface Props {
   spots: Spot[]
@@ -72,6 +73,7 @@ function SpotRow({ spot, onClick }: { spot: Spot; onClick: () => void }) {
   return (
     <button type="button" className="spot-row" onClick={onClick}>
       <span className="spot-row-text">
+        {spot.sacred && <SacredBadge small />}
         <strong>{spot.name}</strong>
         <span className="spot-row-rating">
           {spot.rating ? (

@@ -2419,3 +2419,353 @@ p {
   font-size: 13px;
   color: var(--muted);
 }
+
+/* ───────── Conchas sagradas ───────── */
+:root {
+  --gold: #f5c542;
+  --gold-deep: #c9971c;
+}
+.sacred-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  align-self: flex-start;
+  width: fit-content;
+  padding: 3px 10px 3px 8px;
+  border-radius: var(--r-pill);
+  background: linear-gradient(135deg, #ffe08a, var(--gold) 45%, var(--gold-deep));
+  color: #3a2600;
+  font-size: 13px;
+  font-weight: 700;
+  box-shadow: 0 0 0 1px rgb(255 230 150 / 0.4), 0 4px 14px -4px rgb(245 197 66 / 0.6);
+}
+.sacred-badge.is-small {
+  padding: 2px 8px 2px 6px;
+  font-size: 11.5px;
+}
+.detail-scroll > .sacred-badge {
+  margin-bottom: 8px;
+}
+.btn-sacred {
+  background: linear-gradient(135deg, #ffe08a, var(--gold) 50%, var(--gold-deep));
+  color: #3a2600;
+}
+@media (hover: hover) {
+  .btn-sacred:hover {
+    filter: brightness(1.06);
+  }
+}
+
+/* Ficha */
+.detail-hero.is-sacred {
+  box-shadow: inset 0 -2px 0 var(--gold);
+}
+.detail-hero.is-sacred::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(90% 70% at 50% 120%, rgb(245 197 66 / 0.35), transparent 70%);
+}
+
+/* Marcador: dorado con halo */
+.spot-marker.is-sacred {
+  z-index: 2;
+}
+.spot-marker.is-sacred .spot-pin {
+  background: #2b2108;
+  box-shadow: 0 0 0 2.5px var(--gold), 0 0 18px 2px rgb(245 197 66 / 0.55), 0 6px 14px -2px rgb(0 0 0 / 0.6);
+}
+.sacred-halo {
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  width: 66px;
+  height: 66px;
+  translate: -50% 0;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgb(245 197 66 / 0.45), transparent 65%);
+  pointer-events: none;
+  animation: halo 2.6s ease-in-out infinite;
+}
+.spot-marker.is-sacred .spot-label {
+  opacity: 1;
+  translate: 0 0;
+  color: var(--gold);
+}
+@keyframes halo {
+  50% {
+    transform: scale(1.18);
+    opacity: 0.6;
+  }
+}
+
+/* Menú de los tres puntos */
+.spot-menu {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 2;
+}
+.spot-menu .icon-btn-float {
+  position: static;
+}
+.spot-menu-list {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 250px;
+  padding: 6px;
+  background: var(--rock-2);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-float), 0 0 0 1px var(--line);
+  transform-origin: top right;
+  animation: menu-in 160ms var(--ease-out);
+}
+.spot-menu-item {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  border-radius: var(--r-sm);
+  text-align: left;
+  font-size: 15px;
+  font-weight: 600;
+}
+.spot-menu-item.is-danger {
+  color: var(--danger);
+}
+.spot-menu-item:focus-visible,
+.spot-menu-item:active {
+  background: rgb(255 255 255 / 0.06);
+}
+@media (hover: hover) {
+  .spot-menu-item:hover {
+    background: rgb(255 255 255 / 0.06);
+  }
+}
+.spot-menu-note {
+  padding: 10px 12px;
+  font-size: 14px;
+  color: var(--muted);
+}
+@keyframes menu-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}
+
+/* Candidata */
+.candidate {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 14px;
+  margin: 4px 0 6px;
+  padding: 14px;
+  border-radius: var(--r-md);
+  background: linear-gradient(135deg, rgb(245 197 66 / 0.14), rgb(245 197 66 / 0.04));
+  box-shadow: inset 0 0 0 1px rgb(245 197 66 / 0.35);
+}
+.candidate-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.candidate-text strong {
+  color: var(--gold);
+}
+.candidate-text > span {
+  font-size: 14px;
+  color: var(--muted);
+}
+.candidate-actions {
+  display: flex;
+  gap: 8px;
+}
+.candidate-wait {
+  font-size: 14px;
+  color: var(--muted);
+}
+
+/* Interruptor de "sagrada" en el formulario */
+.sacred-toggle {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px;
+  border-radius: var(--r-md);
+  background: var(--ink);
+  box-shadow: inset 0 0 0 1px var(--line);
+  cursor: pointer;
+  transition: box-shadow 160ms ease, background-color 160ms ease;
+}
+.sacred-toggle.is-on {
+  background: rgb(245 197 66 / 0.08);
+  box-shadow: inset 0 0 0 1.5px var(--gold);
+}
+.sacred-toggle input {
+  position: absolute;
+  opacity: 0;
+  inset: 0;
+  margin: 0;
+  cursor: pointer;
+}
+.sacred-toggle:has(input:focus-visible) {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+.sacred-toggle-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.sacred-toggle-text small {
+  font-size: 13px;
+  color: var(--muted);
+}
+.switch {
+  position: relative;
+  flex: none;
+  width: 46px;
+  height: 28px;
+  border-radius: var(--r-pill);
+  background: var(--rock-3);
+  transition: background-color 180ms ease;
+}
+.switch::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--cream);
+  transition: transform 200ms var(--ease-out);
+}
+.sacred-toggle.is-on .switch {
+  background: var(--gold);
+}
+.sacred-toggle.is-on .switch::after {
+  transform: translateX(18px);
+}
+
+/* ───────── Notificaciones ───────── */
+.chip-row {
+  display: flex;
+  gap: 8px;
+}
+.bell {
+  position: relative;
+  padding: 0 12px;
+}
+.bell-count {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--r-pill);
+  background: var(--orange);
+  color: #1c0a02;
+  font-size: 11.5px;
+  font-weight: 800;
+  box-shadow: 0 0 0 2px var(--ink);
+}
+.notif-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 0 20px;
+}
+.notif-group {
+  padding: 12px 20px 6px;
+  font-size: 14px;
+  color: var(--muted);
+}
+.notif-list {
+  list-style: none;
+  margin: 0;
+  padding: 0 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.notif {
+  position: relative;
+  padding: 14px 14px 12px 16px;
+  border-radius: var(--r-md);
+  background: var(--ink);
+}
+.notif.is-unread::before {
+  content: '';
+  position: absolute;
+  left: 6px;
+  top: 20px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--orange);
+}
+.notif.is-sacred_review,
+.notif.is-sacred_approved {
+  box-shadow: inset 0 0 0 1px rgb(245 197 66 / 0.35);
+}
+.notif-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: baseline;
+}
+.notif-head strong {
+  font-size: 15px;
+}
+.notif.is-sacred_review .notif-head strong,
+.notif.is-sacred_approved .notif-head strong {
+  color: var(--gold);
+}
+.notif-time {
+  flex: none;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.notif p {
+  margin-top: 4px;
+  font-size: 14px;
+  color: rgb(238 230 216 / 0.85);
+}
+.notif-votes {
+  color: var(--gold) !important;
+  font-weight: 600;
+}
+.notif-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+.notif-actions .btn {
+  height: 38px;
+  padding: 0 14px;
+  font-size: 14px;
+}
+.notif-delete {
+  margin-left: auto;
+  width: 38px;
+  height: 38px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sacred-halo {
+    animation: none;
+  }
+}

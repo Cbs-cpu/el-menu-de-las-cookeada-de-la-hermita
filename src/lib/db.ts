@@ -10,6 +10,8 @@ export interface Spot {
   address?: string
   shell: ShellColor
   author?: string // nombre de usuario de quien la puso
+  authorId?: string // id de usuario de quien la puso
+  sacred?: boolean // concha sagrada (solo la pueden marcar los ermitaños)
   createdAt: number
   updatedAt: number
 }
@@ -56,5 +58,32 @@ export interface Media {
   url: string
   kind: 'image' | 'video'
   name: string
+  createdAt: number
+}
+
+/** Petición abierta para que una concha sea sagrada. */
+export interface SacredRequest {
+  id: string
+  spotId: string
+  requestedBy: string
+  requester: string
+  createdAt: number
+}
+
+export interface SacredVote {
+  requestId: string
+  userId: string
+}
+
+export type NotificationKind = 'sacred_review' | 'sacred_vote' | 'sacred_approved' | 'sacred_rejected'
+
+export interface AppNotification {
+  id: string
+  kind: NotificationKind
+  title: string
+  body: string
+  spotId?: string
+  requestId?: string
+  read: boolean
   createdAt: number
 }

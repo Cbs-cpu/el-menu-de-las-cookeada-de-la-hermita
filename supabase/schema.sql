@@ -26,15 +26,15 @@ create table if not exists public.media (
 );
 create index if not exists media_spot_id_idx on public.media (spot_id);
 
--- ───────── Permisos: cualquiera con el enlace de la app puede ver y editar ─────────
+-- ───────── Permisos: solo usuarios con sesión iniciada ─────────
 alter table public.spots enable row level security;
 alter table public.media enable row level security;
 
 drop policy if exists "hermita spots" on public.spots;
-create policy "hermita spots" on public.spots for all to anon, authenticated using (true) with check (true);
+create policy "hermita spots" on public.spots for all to authenticated using (true) with check (true);
 
 drop policy if exists "hermita media" on public.media;
-create policy "hermita media" on public.media for all to anon, authenticated using (true) with check (true);
+create policy "hermita media" on public.media for all to authenticated using (true) with check (true);
 
 -- ───────── Tiempo real: avisar a todos los dispositivos de cada cambio ─────────
 do $$
@@ -57,7 +57,7 @@ drop policy if exists "hermita media leer" on storage.objects;
 create policy "hermita media leer" on storage.objects for select to anon, authenticated using (bucket_id = 'media');
 
 drop policy if exists "hermita media subir" on storage.objects;
-create policy "hermita media subir" on storage.objects for insert to anon, authenticated with check (bucket_id = 'media');
+create policy "hermita media subir" on storage.objects for insert to authenticated with check (bucket_id = 'media');
 
 drop policy if exists "hermita media borrar" on storage.objects;
-create policy "hermita media borrar" on storage.objects for delete to anon, authenticated using (bucket_id = 'media');
+create policy "hermita media borrar" on storage.objects for delete to authenticated using (bucket_id = 'media');

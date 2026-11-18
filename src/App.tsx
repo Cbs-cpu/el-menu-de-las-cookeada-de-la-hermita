@@ -9,13 +9,14 @@ import { SpotForm } from './components/SpotForm'
 import { SpotDetail } from './components/SpotDetail'
 import { SpotList } from './components/SpotList'
 import { SectionMenu, type SectionId } from './components/SectionMenu'
+import { NotificationsButton, NotificationsPanel } from './components/Notifications'
 import { Cercanas } from './components/sections/Cercanas'
 import { Aleatoria } from './components/sections/Aleatoria'
 import { DelDia } from './components/sections/DelDia'
 import { Crab } from './components/Art'
 import { Icon } from './components/ui'
 
-type View = { kind: 'none' } | { kind: 'list' } | { kind: 'detail'; id: string } | { kind: 'form'; id?: string }
+type View = { kind: 'none' } | { kind: 'list' } | { kind: 'notifications' } | { kind: 'detail'; id: string } | { kind: 'form'; id?: string }
 type Draft = { lat: number; lng: number; name?: string; address?: string }
 
 export default function App() {
@@ -136,9 +137,12 @@ export default function App() {
           }}
         />
         {!panelOpen && (
-          <button type="button" className="chip" onClick={() => setView({ kind: 'list' })}>
-            <Icon.List size={16} /> Conchas <span className="chip-count tabular">{spots.length}</span>
-          </button>
+          <div className="chip-row">
+            <button type="button" className="chip" onClick={() => setView({ kind: 'list' })}>
+              <Icon.List size={16} /> Conchas <span className="chip-count tabular">{spots.length}</span>
+            </button>
+            <NotificationsButton onOpen={() => setView({ kind: 'notifications' })} />
+          </div>
         )}
         {status !== 'ready' && (
           <p className={`sync-note ${status === 'loading' ? '' : 'is-problem'}`} role="status">
@@ -151,6 +155,7 @@ export default function App() {
       </div>
 
       <aside className={`panel ${panelOpen ? 'is-open' : ''}`} aria-label="Panel de conchas" inert={!panelOpen}>
+        {view.kind === 'notifications' && <NotificationsPanel onClose={() => setView({ kind: 'none' })} onOpenSpot={openSpot} />}
         {view.kind === 'list' && <SpotList spots={spots} onPick={openSpot} onClose={() => setView({ kind: 'none' })} onNew={newAtCenter} />}
         {view.kind === 'detail' && selected && (
           <SpotDetail

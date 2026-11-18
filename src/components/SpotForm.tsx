@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { SHELL_COLORS, uid, type ShellColor, type Spot } from '../lib/db'
 import { mediaFor, refreshNow, saveSpotRecord, uploadSpotFile, useErmita } from '../lib/store'
+import { isAdminSession, useSession } from '../lib/auth'
+import { SacredBadge } from './Sacred'
 import { formatMB, PrepareError, prepareImage, prepareVideo, type Prepared } from '../lib/media'
 import { formatCoords } from '../lib/geo'
 import { Shell } from './Art'
@@ -53,12 +55,13 @@ function describe(p: Pending) {
   }
 }
 
-
 export function SpotForm({ spot, draft, onCancel, onSaved }: Props) {
   const [name, setName] = useState(spot?.name ?? draft.name ?? '')
   const [rating, setRating] = useState(spot?.rating ?? 0)
   const [notes, setNotes] = useState(spot?.notes ?? '')
   const [shell, setShell] = useState<ShellColor>(spot?.shell ?? 'naranja')
+  const admin = isAdminSession(useSession())
+  const [sacred, setSacredFlag] = useState(!!spot?.sacred)
   const [pending, setPending] = useState<Pending[]>([])
   const [removed, setRemoved] = useState<Set<string>>(new Set())
   const [dragging, setDragging] = useState(false)
@@ -104,7 +107,12 @@ export function SpotForm({ spot, draft, onCancel, onSaved }: Props) {
       setPending((list) => [...list, item])
       const job =
         kind === 'video'
-          ? prepareVideo(file, (progress) => patch(item.key, { progress }), item.ctrl.signal, ({ estimatedBytes }) => patch(item.key, { estimate: estimatedBytes }))
+          ? prepareVideo(
+              file,
+              (progress) => patch(item.key, { progress }),
+              item.ctrl.signal,
+              ({ estimatedBytes }) => patch(item.key, { estimate: estimatedBytes }),
+            )
           : prepareImage(file)
       job
         .then((prepared) => patch(item.key, { stage: 'ready', prepared, progress: 1 }))
@@ -145,11 +153,15 @@ export function SpotForm({ spot, draft, onCancel, onSaved }: Props) {
       lng: draft.lng,
       address: draft.address ?? spot?.address,
       author: spot?.author,
+      sacred: admin ? sacred : spot?.sacred,
       createdAt,
       updatedAt: Date.now(),
     }
     try {
-      await saveSpotRecord(record, existing.filter((m) => removed.has(m.id)))
+      await saveSpotRecord(
+        record,
+        existing.filter((m) => removed.has(m.id)),
+      )
     } catch (err) {
       console.error(err)
       setError('No se pudo guardar la concha. Revisa la conexión y vuelve a probar.')
@@ -215,7 +227,14 @@ export function SpotForm({ spot, draft, onCancel, onSaved }: Props) {
 
         <label className="field">
           <span className="field-label">Nombre</span>
-          <input ref={nameInput} value={name} onChange={(e) => setName(e.target.value)} placeholder="El chiringuito de Paco" maxLength={80} autoComplete="off" />
+          <input
+            ref={nameInput}
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="El chiringuito de Paco"
+            maxLength={80}
+            autoComplete="off"
+          />
         </label>
 
         <div className="field">
@@ -285,17 +304,30 @@ export function SpotForm({ spot, draft, onCancel, onSaved }: Props) {
           </div>
         </div>
 
-        <fieldset className="field">
-          <legend className="field-label">Color de la concha</legend>
-          <div className="swatches">
-            {(Object.keys(SHELL_COLORS) as ShellColor[]).map((k) => (
-              <label key={k} className={`swatch ${shell === k ? 'is-on' : ''}`} title={SHELL_COLORS[k].label}>
-                <input type="radio" name="shell" value={k} checked={shell === k} onChange={() => setShell(k)} aria-label={SHELL_COLORS[k].label} />
-                <Shell color={SHELL_COLORS[k].hex} size={30} />
-              </label>
-            ))}
-          </div>
-        </fieldset>
+        {admin && (
+          <label className={`sacred-toggle ${sacred ? 'is-on' : ''}`}>
+            <input type="checkbox" checked={sacred} onChange={(e) => setSacredFlag(e.target.checked)} />
+            <span className="sacred-toggle-text">
+              <SacredBadge />
+              <small>Solo los ermitaños pueden crear conchas sagradas. Resaltan en el mapa con un brillo dorado.</small>
+            </span>
+            <span className="switch" aria-hidden="true" />
+          </label>
+        )}
+
+        {!(admin && sacred) && (
+          <fieldset className="field">
+            <legend className="field-label">Color de la concha</legend>
+            <div className="swatches">
+              {(Object.keys(SHELL_COLORS) as ShellColor[]).map((k) => (
+                <label key={k} className={`swatch ${shell === k ? 'is-on' : ''}`} title={SHELL_COLORS[k].label}>
+                  <input type="radio" name="shell" value={k} checked={shell === k} onChange={() => setShell(k)} aria-label={SHELL_COLORS[k].label} />
+                  <Shell color={SHELL_COLORS[k].hex} size={30} />
+                </label>
+              ))}
+            </div>
+          </fieldset>
+        )}
 
         {error && (
           <p className="form-error" role="alert">

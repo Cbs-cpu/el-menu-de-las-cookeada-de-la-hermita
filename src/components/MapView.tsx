@@ -145,16 +145,17 @@ export function MapView({ ref, spots, selectedId, draft, mode, userPos, onMapCli
     for (const s of spots) {
       seen.add(s.id)
       const color = SHELL_COLORS[s.shell]?.hex ?? SHELL_COLORS.naranja.hex
-      const sig = `${s.name}|${color}|${s.lat}|${s.lng}|${s.rating}`
+      const sig = `${s.name}|${color}|${s.lat}|${s.lng}|${s.rating}|${s.sacred ? 1 : 0}`
       const existing = markers.current.get(s.id)
       if (existing && existing.sig === sig) continue
       if (existing) existing.marker.remove()
 
       const el = document.createElement('button')
       el.type = 'button'
-      el.className = 'spot-marker'
-      el.setAttribute('aria-label', `Spot ${s.name}`)
-      el.innerHTML = `<span class="spot-pin" style="--shell:${color}">${shellSvg(color, 38)}</span><span class="spot-label">${escapeHtml(s.name)}</span>`
+      el.className = s.sacred ? 'spot-marker is-sacred' : 'spot-marker'
+      el.setAttribute('aria-label', s.sacred ? `Concha sagrada ${s.name}` : `Spot ${s.name}`)
+      const pinColor = s.sacred ? '#F5C542' : color
+      el.innerHTML = `${s.sacred ? '<span class="sacred-halo"></span>' : ''}<span class="spot-pin" style="--shell:${pinColor}">${shellSvg(pinColor, 38)}</span><span class="spot-label">${escapeHtml(s.name)}</span>`
       el.addEventListener('click', (ev) => {
         ev.stopPropagation()
         cb.current.onSelect(s.id)

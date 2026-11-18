@@ -57,6 +57,12 @@ export function useSession() {
 export const usernameOf = (s: Session | null | undefined) =>
   (s?.user.user_metadata?.username as string | undefined) ?? s?.user.email?.split('@')[0] ?? 'ermitaño'
 
+/** Cuenta de administración: por ahora solo "los hermitaños" (la base de datos lo comprueba igual). */
+export const ADMIN_EMAIL = 'los-hermitanos@hermita.app'
+export const isAdminSession = (s: Session | null | undefined) => s?.user.email === ADMIN_EMAIL
+export const isAdmin = () => isAdminSession(session)
+export const currentUserId = () => session?.user.id
+
 export function currentUsername() {
   return session ? usernameOf(session) : undefined
 }
