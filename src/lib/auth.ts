@@ -63,19 +63,43 @@ export function currentUsername() {
 
 // ───────── Acciones ─────────
 
-export type AuthError = 'credenciales' | 'existe' | 'red' | 'desconocido'
+export type AuthErrorKind =
+  | 'credenciales'
+  | 'existe'
+  | 'red'
+  | 'confirmar' // Supabase sigue pidiendo confirmar el email
+  | 'registro-cerrado'
+  | 'email-invalido'
+  | 'contrasena-debil'
+  | 'demasiados-intentos'
+  | 'desconocido'
 
-function classify(message: string, status?: number): AuthError {
-  const m = message.toLowerCase()
-  if (m.includes('invalid login') || m.includes('invalid credentials')) return 'credenciales'
-  if (m.includes('already registered') || m.includes('already exists')) return 'existe'
-  if (m.includes('fetch') || m.includes('network') || status === 0) return 'red'
-  return 'desconocido'
+/** Error para mostrar: tipo + el texto original de Supabase para poder diagnosticar. */
+export interface AuthError {
+  kind: AuthErrorKind
+  detail?: string
+}
+
+function classify(error: { message: string; status?: number; code?: string }): AuthError {
+  const m = error.message.toLowerCase()
+  const code = error.code ?? ''
+  const detail = [code, error.message].filter(Boolean).join(': ')
+  let kind: AuthErrorKind = 'desconocido'
+  if (code === 'invalid_credentials' || m.includes('invalid login') || m.includes('invalid credentials')) kind = 'credenciales'
+  else if (code === 'user_already_exists' || code === 'email_exists' || m.includes('already registered')) kind = 'existe'
+  else if (code === 'email_not_confirmed' || m.includes('not confirmed') || m.includes('confirmation email')) kind = 'confirmar'
+  else if (code === 'signup_disabled' || code === 'email_provider_disabled' || m.includes('signups not allowed')) kind = 'registro-cerrado'
+  else if (code === 'email_address_invalid' || m.includes('email address') && m.includes('invalid')) kind = 'email-invalido'
+  else if (code === 'weak_password' || m.includes('password should')) kind = 'contrasena-debil'
+  else if (code.startsWith('over_') || error.status === 429) kind = 'demasiados-intentos'
+  else if (m.includes('fetch') || m.includes('network') || error.status === 0) kind = 'red'
+  console.error('Supabase auth:', detail)
+  return { kind, detail }
 }
 
 export async function signIn(username: string, password: string): Promise<AuthError | null> {
   const { error } = await supabase.auth.signInWithPassword({ email: usernameToEmail(username), password })
-  return error ? classify(error.message, error.status) : null
+  return error ? classify(error) : null
 }
 
 export async function signUp(username: string, password: string): Promise<AuthError | null> {
@@ -84,12 +108,9 @@ export async function signUp(username: string, password: string): Promise<AuthEr
     password,
     options: { data: { username: username.trim() } },
   })
-  if (error) return classify(error.message, error.status)
-  // Si Supabase pide confirmar el email no hay sesión: con emails internos eso no puede pasar.
-  if (!data.session) {
-    console.error('Supabase pide confirmar el email: desactiva "Confirm email" en Authentication → Providers → Email')
-    return 'desconocido'
-  }
+  if (error) return classify(error)
+  // Sin sesión = Supabase quiere que se confirme el email (que es interno y nadie puede confirmar).
+  if (!data.session) return { kind: 'confirmar', detail: 'signUp sin sesión: Confirm email está activado' }
   return null
 }
 

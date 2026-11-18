@@ -1,16 +1,24 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { MIN_PASSWORD, signIn, signUp, validUsername, type AuthError } from '../lib/auth'
+import { MIN_PASSWORD, signIn, signUp, validUsername, type AuthError, type AuthErrorKind } from '../lib/auth'
 import { buildQuiz, WIZARD_PROMPT, type WizardQuestion } from '../lib/wizard'
 import { Crab } from './Art'
 
 type Mode = 'login' | 'register'
 
-const ERRORS: Record<AuthError, string> = {
+const ERRORS: Record<AuthErrorKind, string> = {
   credenciales: 'Usuario o contraseña incorrectos.',
   existe: 'Ese usuario ya existe. Elige otro nombre o entra con él.',
   red: 'No hay conexión con la hermita. Revisa internet y vuelve a probar.',
-  desconocido: 'Algo ha fallado al hablar con la hermita. Vuelve a probar en un rato.',
+  confirmar:
+    'Supabase está pidiendo confirmar el email. Hay que desactivar "Confirm email" en Supabase (Authentication → Sign In / Providers → Email).',
+  'registro-cerrado': 'El registro está desactivado en Supabase. Hay que activar "Allow new users to sign up" en Authentication → Sign In / Providers.',
+  'email-invalido': 'Supabase no acepta el email interno de esta cuenta. Prueba con otro nombre de usuario (solo letras y números).',
+  'contrasena-debil': 'Supabase pide una contraseña más segura. Prueba con una más larga, con letras y números.',
+  'demasiados-intentos': 'Demasiados intentos seguidos. Espera un minuto y vuelve a probar.',
+  desconocido: 'Algo ha fallado al hablar con la hermita.',
 }
+
+const describe = (e: AuthError) => ERRORS[e.kind] + (e.kind === 'desconocido' && e.detail ? ` (${e.detail})` : '')
 
 export function AuthScreen() {
   const [mode, setMode] = useState<Mode>('login')
@@ -40,7 +48,7 @@ export function AuthScreen() {
       setBusy(true)
       const err = await signIn(username, password)
       setBusy(false)
-      if (err) setError(ERRORS[err])
+      if (err) setError(describe(err))
       return
     }
     if (!validUsername(username)) return setError('El usuario tiene que tener entre 3 y 30 caracteres.')
@@ -53,7 +61,7 @@ export function AuthScreen() {
     const err = await signUp(username, password)
     if (err) {
       setStep('form')
-      setError(ERRORS[err])
+      setError(describe(err))
     }
     // Si va bien, la sesión cambia y la app se abre sola.
   }
